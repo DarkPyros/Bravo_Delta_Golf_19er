@@ -83,7 +83,16 @@
 
 #include <msp430.h>
 
-
+struct nonce{
+	int year;
+	char month;
+	char day;
+	char hour;
+	char minute;
+	char second;
+	char seed_channel;
+	long long somebits;
+};
 
 void Board_Init(void);
 void Clock_Init(void);
@@ -172,14 +181,14 @@ void Clock_Init(void)
   UCSCTL1 = DCORSEL_7;                      // Select DCO range 24MHz operation
   UCSCTL2 = FLLD_1 + 614;                   // Set DCO Multiplier for 12MHz
                                             // (N + 1) * FLLRef = Fdco
-                                            // (374 + 1) * 32768 = 12MHz
+                                            // (614 + 1) * 32768 = 20MHz
                                             // Set FLL Div = fDCOCLK/2
   __bic_SR_register(SCG0);                  // Enable the FLL control loop
 
   // Worst-case settling time for the DCO when the DCO range bits have been
   // changed is n x 32 x 32 x f_MCLK / f_FLL_reference. See UCS chapter in 5xx
   // UG for optimization.
-  // 32 x 32 x 12 MHz / 32,768 Hz = 375000 = MCLK cycles for DCO to settle
+  // 32 x 32 x 20 MHz / 20,000 Hz = 625000 = MCLK cycles for DCO to settle
   __delay_cycles(625000);
 
   // Loop until XT1,XT2 & DCO fault flag is cleared
