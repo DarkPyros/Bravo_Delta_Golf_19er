@@ -82,8 +82,7 @@
 //******************************************************************************
 
 #include <msp430.h>
-
-
+#include "radio.h"
 
 void Board_Init(void);
 void Clock_Init(void);
