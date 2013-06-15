@@ -103,6 +103,7 @@ int main (void)
   }
 }
 
+/*
 #pragma vector=RTC_VECTOR
 __interrupt void RTCISR (void)
 {
@@ -111,6 +112,7 @@ __interrupt void RTCISR (void)
  // __bic_SR_register_on_exit(LPM4_bits);     // Exit LPM3.5
   __no_operation();
 }
+*/
 
 void Clock_Init(void)
 {
