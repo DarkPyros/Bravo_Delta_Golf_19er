@@ -83,6 +83,28 @@
 
 #include <msp430.h>
 
+#define HWREG(x)     	(*((volatile unsigned int *)(x)))
+
+
+#define STATUS_SUCCESS  0x01
+#define STATUS_FAIL     0x00
+
+#define OFS_AESACTL0           (0x0000)       /* AES accelerator control register 0 */
+#define OFS_AESACTL0_L         OFS_AESACTL0
+#define OFS_AESACTL0_H         OFS_AESACTL0+1
+#define OFS_AESASTAT           (0x0004)       /* AES accelerator status register */
+#define OFS_AESASTAT_L         OFS_AESASTAT
+#define OFS_AESASTAT_H         OFS_AESASTAT+1
+#define OFS_AESAKEY            (0x0006)       /* AES accelerator key register */
+#define OFS_AESAKEY_L          OFS_AESAKEY
+#define OFS_AESAKEY_H          OFS_AESAKEY+1
+#define OFS_AESADIN            (0x0008)       /* AES accelerator data in register */
+#define OFS_AESADIN_L          OFS_AESADIN
+#define OFS_AESADIN_H          OFS_AESADIN+1
+#define OFS_AESADOUT           (0x000A)       /* AES accelerator data out register  */
+#define OFS_AESADOUT_L         OFS_AESADOUT
+#define OFS_AESADOUT_H         OFS_AESADOUT+1
+
 struct nonce{
 	int year;
 	char month;
@@ -91,50 +113,90 @@ struct nonce{
 	char minute;
 	char second;
 	char seed_channel;
-	long long somebits;
+	unsigned long long somebits;
 };
+
+unsigned char RandomNumbers[16] = {	0x00, 0x00, 0x00, 0x00,
+								0x00, 0x00, 0x00, 0x00,
+								0x00, 0x00, 0x00, 0x00,
+								0x00, 0x00, 0x00, 0x00	};
+unsigned char DataAESdecrypted[16] = {	0x00, 0x00, 0x00, 0x00,
+								0x00, 0x00, 0x00, 0x00,
+								0x00, 0x00, 0x00, 0x00,
+								0x00, 0x00, 0x00, 0x00	};
+
+unsigned char DataAESencrypted[16] = {	0x00, 0x00, 0x00, 0x00,
+								0x00, 0x00, 0x00, 0x00,
+								0x00, 0x00, 0x00, 0x00,
+								0x00, 0x00, 0x00, 0x00	};
 
 void Board_Init(void);
 void Clock_Init(void);
 void RTC_Init(void);
+unsigned char AES_setCipherKey (unsigned int baseAddress,const unsigned char * CipherKey);
+unsigned char AES_encryptData (unsigned int baseAddress,const unsigned char * Data,unsigned char * encryptedData);
+unsigned char AES_decryptDataUsingEncryptionKey (unsigned int baseAddress,const unsigned char * Data, unsigned char * decryptedData);
+
 
 
 int main (void)
 {
   WDTCTL = WDTPW + WDTHOLD;                 // Stop WDT
-  int test = 0;
   
   // Init board and clock
   Board_Init();
   Clock_Init();
   RTC_Init();
 
-  char combined[16];
-  int test2;
-  int i=0;
+  TA1CTL = TASSEL_1 + MC_2 + TACLR;	//Reset and activate Counter
+
+
+
+  	unsigned char CipherKey[16] = 	{	0x2b, 0x7e, 0x15, 0x16,
+  										0x28, 0xae, 0xd2, 0xa6,
+  										0xab, 0xf7, 0x15, 0x88,
+  										0x09, 0xcf, 0x4f, 0x3c	};
+/*
+  	unsigned char Data[16] = 		{	0x6b, 0xc1, 0xbe, 0xe2,
+  										0x2e, 0x40, 0x9f, 0x96,
+  										0xe9, 0x3d, 0x7e, 0x11,
+  										0x73, 0x93, 0x17, 0x2a	};
+*/
+
+
+
+  struct nonce RandomData;
+  int i = 0;
+  int j = 0;
+
+  AES_setCipherKey(__MSP430_BASEADDRESS_AES__, CipherKey);
+
+  RandomData.year = (int)RTCYEAR;
+  RandomData.month = (char)RTCMON;
+  RandomData.day = (char)RTCDAY;
+  RandomData.hour = (char)RTCHOUR;
+  RandomData.minute = (char)RTCMIN;
+  RandomData.second = (char)RTCSEC;
+  RandomData.seed_channel = 0xAA;
+  RandomData.somebits = 0xAAAAAAAAAAAAAAAALL;
 
   while(1)
   {
-	  P1OUT ^= BIT0;
-  	  test2 = RTCYEAR;
-  	  combined[0] = (char)(test2 >> 8);
-  	  combined[1] = (char)test2;
-  	  combined[2] = (char)RTCMON;
-  	  combined[3] = (char)RTCDAY;
-  	  combined[4] = (char)RTCHOUR;
-  	  combined[5] = (char)RTCMIN;
-  	  combined[6] = (char)RTCSEC;
-  	  P1OUT ^= BIT0;
-  	  for(i=0;i<1000;i++)
-  		__no_operation();
-  	  /*
-	  if((RTCSEC % 2 == 0) && (test == 0))
-	  {
+	P1OUT ^= BIT0;
+	RandomData.year = (int)RTCYEAR;
+	RandomData.month = (char)RTCMON;
+	RandomData.day = (char)RTCDAY;
+	RandomData.hour = (char)RTCHOUR;
+	RandomData.minute = (char)RTCMIN;
+	RandomData.second = (char)RTCSEC;
+	RandomData.somebits += (unsigned long long)TA1R;
+	TA1CTL = TASSEL_1 + MC_2 + TACLR;		//Reset and activate Counter
+  	AES_encryptData(__MSP430_BASEADDRESS_AES__, (unsigned char *) &RandomData, RandomNumbers);
+	AES_decryptDataUsingEncryptionKey(__MSP430_BASEADDRESS_AES__, RandomNumbers, DataAESdecrypted);
+	P1OUT ^= BIT0;
 
-	  }
-	  if(((RTCSEC -1) % 2 == 0) && (test == 1))
-	  		  test = 0;
-	  		  */
+	for(i = 0; i < 10000; i++);
+
   }
 }
 
@@ -158,7 +220,7 @@ void Clock_Init(void)
   {
 	UCSCTL7 &= ~(XT1LFOFFG + DCOFFG);
                                             // Clear XT1,DCO fault flags
-	SFRIFG1 &= ~OFIFG;                  // Clear fault flags
+	SFRIFG1 &= ~OFIFG;                  	// Clear fault flags
   }while (SFRIFG1&OFIFG);                   // Test oscillator fault flag
   
   UCSCTL6 &= ~(XT1DRIVE_3);                 // Xtal is now stable, reduce drive
@@ -178,7 +240,7 @@ void Clock_Init(void)
 
   __bis_SR_register(SCG0);                  // Disable the FLL control loop
   UCSCTL0 = 0x0000;                         // Set lowest possible DCOx, MODx
-  UCSCTL1 = DCORSEL_7;                      // Select DCO range 24MHz operation
+  UCSCTL1 = DCORSEL_7;                      // Select DCO range 20MHz operation
   UCSCTL2 = FLLD_1 + 614;                   // Set DCO Multiplier for 12MHz
                                             // (N + 1) * FLLRef = Fdco
                                             // (614 + 1) * 32768 = 20MHz
@@ -228,6 +290,74 @@ void RTC_Init(void)
   RTCCTL01|= RTCTEV_0;                      // Set RTCTEV for 1 minute alarm
   RTCCTL01 &= ~(RTCHOLD);                   // Start RTC calendar mode
 }
+
+unsigned char AES_setCipherKey (unsigned int baseAddress,
+	 const unsigned char * CipherKey
+	 )
+{
+	unsigned char i = 0;
+	unsigned int tempVariable = 0;
+
+	// Wait until AES accelerator is busy
+	while(AESBUSY == (HWREG(baseAddress + OFS_AESASTAT) & AESBUSY) );
+
+	for (i = 0; i < 16; i = i + 2)
+	{
+		//HWREG(baseAddress + OFS_AESAKEY) = ( unsigned int)(( unsigned int)CipherKey[i] | ( unsigned int) (CipherKey[i + 1] << 8));
+		tempVariable = (unsigned int)(CipherKey[i]);
+		tempVariable = tempVariable | ((unsigned int)(CipherKey[i + 1]) << 8);
+		HWREG(baseAddress + OFS_AESAKEY) = tempVariable;
+	}
+
+    // Wait until key is written
+	while(0x00 == (HWREG(baseAddress + OFS_AESASTAT) & AESKEYWR ));
+
+    return STATUS_SUCCESS;
+}
+
+unsigned char AES_encryptData (unsigned int baseAddress,
+	const unsigned char * Data,
+	unsigned char * encryptedData)
+{
+	unsigned char i;
+	unsigned int tempData = 0;
+	unsigned int tempVariable = 0;
+
+	// Set module to encrypt mode
+	HWREG(baseAddress + OFS_AESACTL0) &= ~AESOP_3;
+
+
+	// Write data to encrypt to module
+	for (i = 0; i < 16; i = i + 2)
+	{
+		//HWREG(baseAddress + OFS_AESADIN) = ( unsigned int)(( unsigned int)Data[i] | ( unsigned int) (Data[i + 1] << 8));
+		tempVariable = (unsigned int)(Data[i]);
+		tempVariable = tempVariable | ((unsigned int)(Data[i+1]) << 8);
+		HWREG(baseAddress + OFS_AESADIN) = tempVariable;
+	}
+
+	// Key that is already written shall be used
+	// Encryption is initialized by setting AESKEYWR to 1
+	HWREG(baseAddress + OFS_AESASTAT) |= AESKEYWR;
+
+	// Wait unit finished ~167 MCLK
+	while(AESBUSY == (HWREG(baseAddress + OFS_AESASTAT) & AESBUSY) );
+
+	// Write encrypted data back to variable
+	for (i = 0; i < 16; i = i + 2)
+	{
+		tempData = HWREG(baseAddress + OFS_AESADOUT);
+		*(encryptedData + i) = (unsigned char)tempData;
+		*(encryptedData +i + 1) = (unsigned char)(tempData >> 8);
+
+
+	}
+
+    return STATUS_SUCCESS;
+}
+
+
+
 /*
 void EnterLPM35(void)
 {
@@ -238,3 +368,43 @@ void EnterLPM35(void)
   __no_operation();                         // enabled
 }
 */
+
+
+unsigned char AES_decryptDataUsingEncryptionKey (unsigned int baseAddress,
+	const unsigned char * Data,
+	unsigned char * decryptedData)
+{
+	unsigned char i;
+	unsigned int tempData = 0;
+	unsigned int tempVariable = 0;
+
+	// Set module to decrypt mode
+	HWREG(baseAddress + OFS_AESACTL0) &= ~(AESOP1);
+	HWREG(baseAddress + OFS_AESACTL0) |= AESOP0;
+
+	// Write data to decrypt to module
+	for (i = 0; i < 16; i = i + 2)
+	{
+		//HWREG(baseAddress + OFS_AESADIN) = ( unsigned int)(( unsigned int)Data[i] | ( unsigned int) (Data[i + 1] << 8));
+		tempVariable = (unsigned int)(Data[i+1]  << 8);
+		tempVariable = tempVariable | ((unsigned int)(Data[i]));
+		HWREG(baseAddress + OFS_AESADIN) = tempVariable;
+	}
+
+	// Key that is already written shall be used
+	// Now decryption starts
+	HWREG(baseAddress + OFS_AESASTAT) |= AESKEYWR;
+
+	// Wait unit finished ~214 MCLK
+	while(AESBUSY == (HWREG(baseAddress + OFS_AESASTAT) & AESBUSY) );
+
+	// Write encrypted data back to variable
+	for (i = 0; i < 16; i = i + 2)
+	{
+		tempData = HWREG(baseAddress + OFS_AESADOUT);
+		*(decryptedData + i) = (unsigned char)tempData;
+		*(decryptedData +i+1) = (unsigned char)(tempData >> 8);
+	}
+
+	return STATUS_SUCCESS;
+}
