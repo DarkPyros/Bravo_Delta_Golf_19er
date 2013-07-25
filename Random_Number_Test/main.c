@@ -84,6 +84,7 @@
 #include <msp430.h>
 
 //#define TEXT
+//#define DEBUG
 
 #define HWREG(x)     	(*((volatile unsigned int *)(x)))
 
@@ -171,7 +172,8 @@ int main (void)
   RTC_Init();
   UART_Init();
 
-  TA1CTL = TASSEL_1 + MC_2 + TACLR;	//Reset and activate Counter
+  TA1EX0 = 0x04;
+  TA1CTL = TASSEL_2 + ID_2 + MC_2 + TACLR;	//Reset and activate Counter
 
 
 
@@ -191,6 +193,7 @@ int main (void)
   struct nonce RandomData;
 
   unsigned char Button_Press = 0;
+  unsigned int Timer = 0;
 
   AES_setCipherKey(__MSP430_BASEADDRESS_AES__, CipherKey);
 
@@ -207,7 +210,9 @@ int main (void)
   {
 	if ((P1IN & BIT7) == 0)
 	{
-		__delay_cycles(6000000); // Switch debounce = 300ms @ 20 MHz
+        #ifndef DEBUG
+		   __delay_cycles(6000000); // Switch debounce = 300ms @ 20 MHz
+        #endif
 
 		if (Button_Press == 0)
 			Button_Press = 1;
@@ -225,8 +230,14 @@ int main (void)
     	RandomData.hour = (char)RTCHOUR;
     	RandomData.minute = (char)RTCMIN;
     	RandomData.second = (char)RTCSEC;
-    	RandomData.somebits += (unsigned long long)TA1R;
-    	TA1CTL = TASSEL_1 + MC_2 + TACLR;		//Reset and activate Counter
+
+    	do
+    	{
+    	   Timer = TA1R;
+    	} while (Timer != TA1R);
+
+    	RandomData.somebits += Timer;
+    	TA1CTL = TASSEL_2 + ID_2 + MC_2 + TACLR;	//Reset and activate Counter
     	AES_encryptData(__MSP430_BASEADDRESS_AES__, (unsigned char *) &RandomData, RandomNumbers);
     	//AES_decryptDataUsingEncryptionKey(__MSP430_BASEADDRESS_AES__, RandomNumbers, DataAESdecrypted);
     	P1OUT ^= BIT0;
@@ -336,7 +347,7 @@ void UART_Init (void)
    UCA0CTL1 |= UCSSEL_2;                     // SMCLK
    UCA0BR0 = 0x5B;                           // 20MHz 57600 (see User's Guide)
    UCA0BR1 = 1;                              // 20MHz 57600
-   UCA0MCTL |= UCBRS_2 + UCBRF_0;            // Modulation UCBRSx=5, UCBRFx=0
+   UCA0MCTL |= UCBRS_2 + UCBRF_0;            // Modulation UCBRSx=2, UCBRFx=0
    UCA0CTL1 &= ~UCSWRST;                     // **Initialize USCI state machine**
 }
 
@@ -351,13 +362,15 @@ void UART_TX(unsigned char * randData, unsigned char size)
 	   UCA0TXBUF = randData[index];	// transmit random byte data
    }
 
-   while (UCA0STAT & UCBUSY);   // wait for UART to be free
+   #ifdef TEXT
+      while (UCA0STAT & UCBUSY);   // wait for UART to be free
 
-   UCA0TXBUF = 0x0D;	// transmit CR
+      UCA0TXBUF = 0x0D;	// transmit CR
 
-   while (UCA0STAT & UCBUSY);   // wait for UART to be free
+      while (UCA0STAT & UCBUSY);   // wait for UART to be free
 
-   UCA0TXBUF = 0x0A;	// transmit LF
+      UCA0TXBUF = 0x0A;	// transmit LF
+   #endif
 }
 
 void Convert_To_ASCII_Binary(unsigned char * randData, unsigned char * BinaryData)
