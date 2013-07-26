@@ -83,7 +83,7 @@
 
 #include <msp430.h>
 
-//#define TEXT
+#define TEXT
 //#define DEBUG
 
 #define HWREG(x)     	(*((volatile unsigned int *)(x)))
@@ -172,8 +172,9 @@ int main (void)
   RTC_Init();
   UART_Init();
 
-  TA1EX0 = 0x04;
-  TA1CTL = TASSEL_2 + ID_2 + MC_2 + TACLR;	//Reset and activate Counter
+  TA1EX0 = 0x0004;
+  TA1CCTL0 = 0x0080;
+  TA1CTL = TASSEL_2 + ID_2 + MC_1 + TACLR;	//Reset and activate Counter
 
 
 
@@ -237,7 +238,7 @@ int main (void)
     	} while (Timer != TA1R);
 
     	RandomData.somebits += Timer;
-    	TA1CTL = TASSEL_2 + ID_2 + MC_2 + TACLR;	//Reset and activate Counter
+    	TA1CTL = TASSEL_2 + ID_2 + MC_1 + TACLR;	//Reset and activate Counter
     	AES_encryptData(__MSP430_BASEADDRESS_AES__, (unsigned char *) &RandomData, RandomNumbers);
     	//AES_decryptDataUsingEncryptionKey(__MSP430_BASEADDRESS_AES__, RandomNumbers, DataAESdecrypted);
     	P1OUT ^= BIT0;
@@ -271,12 +272,13 @@ void Clock_Init(void)
 
   UCSCTL6 &= ~(XT1DRIVE_3);                 // Xtal is now stable, reduce drive
                                             // strength
-
+/*
   PMAPPWD = 0x02D52;                        // Get write-access to port mapping regs
   P2MAP0 = PM_ACLK;                         // Map ACLK output to P2.0
   P2MAP2 = PM_MCLK;                         // Map MCLK output to P2.2
   P2MAP4 = PM_SMCLK;                        // Map SMCLK output to P2.4
   PMAPPWD = 0;                              // Lock port mapping registers
+*/
 
   P2DIR |= BIT0 + BIT2 + BIT4;              // ACLK, MCLK, SMCLK set out to pins
   P2SEL |= BIT0 + BIT2 + BIT4;              // P2.0,2,4 for debugging purposes.
