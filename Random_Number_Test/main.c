@@ -154,8 +154,9 @@ void Board_Init(void);
 void Clock_Init(void);
 void RTC_Init(void);
 void UART_Init(void);
-void UART_TX(unsigned char *, unsigned char);
-void Convert_To_ASCII_Binary(unsigned char *, unsigned char *);
+void UART_TX(void *, unsigned char);
+void Convert_To_ASCII_Binary(unsigned char *, unsigned char *, unsigned char);
+void Convert_To_ASCII_Hex(unsigned char *, unsigned char *, unsigned char);
 unsigned char AES_setCipherKey (unsigned int,const unsigned char *);
 unsigned char AES_encryptData (unsigned int,const unsigned char *,unsigned char *);
 unsigned char AES_decryptDataUsingEncryptionKey (unsigned int,const unsigned char *, unsigned char *);
@@ -173,8 +174,9 @@ int main (void)
   UART_Init();
 
   TA1EX0 = 0x0004;
-  TA1CCTL0 = 0x0080;
-  TA1CTL = TASSEL_2 + ID_2 + MC_1 + TACLR;	//Reset and activate Counter
+  //TA1CCTL0 = 0x0080;
+  //TA1CCR0 = 0x0000;
+  TA1CTL = TASSEL_2 + ID_2 + MC_2 + TACLR;	//Reset and activate Counter
 
 
 
@@ -195,6 +197,11 @@ int main (void)
 
   unsigned char Button_Press = 0;
   unsigned int Timer = 0;
+  unsigned char Timer_Value1[4] = { 0x00, 0x00, 0x00, 0x00 };
+  unsigned char Timer_Value2[16] = { 0x00, 0x00, 0x00, 0x00,
+                                     0x00, 0x00, 0x00, 0x00,
+                                     0x00, 0x00, 0x00, 0x00,
+                                     0x00, 0x00, 0x00, 0x00 };
 
   AES_setCipherKey(__MSP430_BASEADDRESS_AES__, CipherKey);
 
@@ -238,21 +245,18 @@ int main (void)
     	} while (Timer != TA1R);
 
     	RandomData.somebits += Timer;
-    	TA1CTL = TASSEL_2 + ID_2 + MC_1 + TACLR;	//Reset and activate Counter
+    	TA1CTL = TASSEL_2 + ID_2 + MC_2 + TACLR;	//Reset and activate Counter
     	AES_encryptData(__MSP430_BASEADDRESS_AES__, (unsigned char *) &RandomData, RandomNumbers);
     	//AES_decryptDataUsingEncryptionKey(__MSP430_BASEADDRESS_AES__, RandomNumbers, DataAESdecrypted);
     	P1OUT ^= BIT0;
 
         #ifdef TEXT
-    	   Convert_To_ASCII_Binary(RandomNumbers, BinaryText);
-    	   UART_TX(BinaryText, sizeof(BinaryText));
+    	   Convert_To_ASCII_Binary((unsigned char *)&Timer, Timer_Value2, sizeof(Timer));
+    	   UART_TX((void *)Timer_Value2, sizeof(Timer_Value2));
         #else
-    	   UART_TX(RandomNumbers, sizeof(RandomNumbers));
+    	   UART_TX((void *)RandomNumbers, sizeof(RandomNumbers));
         #endif
     }
-
-	//for(i = 0; i < 1000; i++);
-
   }
 }
 
@@ -282,6 +286,7 @@ void Clock_Init(void)
 
   P2DIR |= BIT0 + BIT2 + BIT4;              // ACLK, MCLK, SMCLK set out to pins
   P2SEL |= BIT0 + BIT2 + BIT4;              // P2.0,2,4 for debugging purposes.
+
 
   UCSCTL3 |= SELREF_2;                      // Set DCO FLL reference = REFO
   UCSCTL4 |= SELA_2;                        // Set ACLK = REFO
@@ -321,6 +326,7 @@ void Board_Init(void)
   P1OUT = 0x80;P2OUT = 0x00;P3OUT = 0x00;P4OUT = 0x00;P5OUT = 0x00;PJOUT = 0x00;
   P1DIR = 0x6F;P2DIR = 0xFF;P3DIR = 0xFF;P4DIR = 0xFF;P5DIR = 0xFF;PJDIR = 0xFF;
   P1REN = 0x90;
+               P2SEL = 0x02;
 }
 
 void RTC_Init(void)
@@ -353,15 +359,15 @@ void UART_Init (void)
    UCA0CTL1 &= ~UCSWRST;                     // **Initialize USCI state machine**
 }
 
-void UART_TX(unsigned char * randData, unsigned char size)
+void UART_TX(void * data, unsigned char size)
 {
    unsigned int index = 0;
 
-   for (index = 0; index < size; index++)
+   for (index = size; index > 0; index--)
    {
 	   while (UCA0STAT & UCBUSY);   // wait for UART to be free
 
-	   UCA0TXBUF = randData[index];	// transmit random byte data
+	   UCA0TXBUF = *((unsigned char *)data + (index - 1));	// transmit random byte data
    }
 
    #ifdef TEXT
@@ -375,24 +381,51 @@ void UART_TX(unsigned char * randData, unsigned char size)
    #endif
 }
 
-void Convert_To_ASCII_Binary(unsigned char * randData, unsigned char * BinaryData)
+void Convert_To_ASCII_Binary(unsigned char * randData, unsigned char * BinaryData, unsigned char size)
 {
    unsigned int i = 0, j = 0;
    unsigned int window = 0;
    unsigned char temp = 0;
 
-   for (i = 0; i < 16; i++)
+   for (i = 0; i < size; i++)
    {
       temp = randData[i];
 
-      for (j = window + 8; j > window; j--)
+      for (j = window; j < window + 8; j++)
       {
-    	  BinaryData[j - 1] = (temp % 2) + 0x30;
+    	  BinaryData[j] = (temp % 2) + 0x30;
     	  temp = temp >> 1;
       }
 
       window += 8;
    }
+}
+
+void Convert_To_ASCII_Hex(unsigned char * input, unsigned char * output, unsigned char size)
+{
+	unsigned int index = 0;
+	unsigned char * temp_in = input;
+	unsigned char * temp_out = output;
+
+	for (index = 0; index < size; index++)
+	{
+		if ((*temp_in & 0x0F) > 9)
+		   *output = (*temp_in & 0x0F) + 0x37;
+		else
+		   *output = (*temp_in & 0x0F) + 0x30;
+
+		output += 1;
+
+		if (((*temp_in >> 4) & 0x0F) > 9)
+           *output = ((*temp_in >> 4) & 0x0F) + 0x37;
+		else
+		   *output = ((*temp_in >> 4) & 0x0F) + 0x30;
+
+		output += 1;
+		temp_in++;
+	}
+
+	output = temp_out;
 }
 
 unsigned char AES_setCipherKey (unsigned int baseAddress,
