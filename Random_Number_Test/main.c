@@ -82,8 +82,10 @@
 //******************************************************************************
 
 #include <msp430.h>
+#include <stdlib.h>
 
-#define TEXT
+//#define TEXT_BINARY
+#define TEXT_HEX
 //#define DEBUG
 
 #define HWREG(x)     	(*((volatile unsigned int *)(x)))
@@ -119,44 +121,54 @@ struct nonce{
 };
 
 unsigned char RandomNumbers[16] = {	0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00	};
+								    0x00, 0x00, 0x00, 0x00,
+								    0x00, 0x00, 0x00, 0x00,
+								    0x00, 0x00, 0x00, 0x00 };
 
 unsigned char BinaryText[128] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, };
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, };
 
-unsigned char DataAESdecrypted[16] = {	0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00	};
+unsigned char HexText[32] = { 0x00, 0x00, 0x00, 0x00,
+                              0x00, 0x00, 0x00, 0x00,
+                              0x00, 0x00, 0x00, 0x00,
+                              0x00, 0x00, 0x00, 0x00,
+                              0x00, 0x00, 0x00, 0x00,
+                              0x00, 0x00, 0x00, 0x00,
+                              0x00, 0x00, 0x00, 0x00,
+                              0x00, 0x00, 0x00, 0x00 };
 
-unsigned char DataAESencrypted[16] = {	0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00,
-								0x00, 0x00, 0x00, 0x00	};
+unsigned char DataAESdecrypted[16] = { 0x00, 0x00, 0x00, 0x00,
+								       0x00, 0x00, 0x00, 0x00,
+								       0x00, 0x00, 0x00, 0x00,
+								       0x00, 0x00, 0x00, 0x00 };
+
+unsigned char DataAESencrypted[16] = { 0x00, 0x00, 0x00, 0x00,
+								       0x00, 0x00, 0x00, 0x00,
+								       0x00, 0x00, 0x00, 0x00,
+								       0x00, 0x00, 0x00, 0x00 };
 
 void Board_Init(void);
 void Clock_Init(void);
 void RTC_Init(void);
 void UART_Init(void);
-void UART_TX(void *, unsigned char);
+void UART_TX(unsigned char *, unsigned char);
 void Convert_To_ASCII_Binary(unsigned char *, unsigned char *, unsigned char);
 void Convert_To_ASCII_Hex(unsigned char *, unsigned char *, unsigned char);
+void Byte_Reverse(unsigned char *, unsigned char);
 unsigned char AES_setCipherKey (unsigned int,const unsigned char *);
 unsigned char AES_encryptData (unsigned int,const unsigned char *,unsigned char *);
 unsigned char AES_decryptDataUsingEncryptionKey (unsigned int,const unsigned char *, unsigned char *);
@@ -185,23 +197,17 @@ int main (void)
   										0xab, 0xf7, 0x15, 0x88,
   										0x09, 0xcf, 0x4f, 0x3c	};
 
-/*
   	unsigned char Data[16] = 		{	0x6b, 0xc1, 0xbe, 0xe2,
   										0x2e, 0x40, 0x9f, 0x96,
   										0xe9, 0x3d, 0x7e, 0x11,
   										0x73, 0x93, 0x17, 0x2a	};
-*/
-
 
   struct nonce RandomData;
 
   unsigned char Button_Press = 0;
   unsigned int Timer = 0;
-  unsigned char Timer_Value1[4] = { 0x00, 0x00, 0x00, 0x00 };
-  unsigned char Timer_Value2[16] = { 0x00, 0x00, 0x00, 0x00,
-                                     0x00, 0x00, 0x00, 0x00,
-                                     0x00, 0x00, 0x00, 0x00,
-                                     0x00, 0x00, 0x00, 0x00 };
+
+  unsigned char Timer_Hex[4] = { 0x00, 0x00, 0x00, 0x00 };
 
   AES_setCipherKey(__MSP430_BASEADDRESS_AES__, CipherKey);
 
@@ -246,15 +252,20 @@ int main (void)
 
     	RandomData.somebits += Timer;
     	TA1CTL = TASSEL_2 + ID_2 + MC_2 + TACLR;	//Reset and activate Counter
-    	AES_encryptData(__MSP430_BASEADDRESS_AES__, (unsigned char *) &RandomData, RandomNumbers);
+    	AES_encryptData(__MSP430_BASEADDRESS_AES__, Data, RandomNumbers);
+    	//AES_encryptData(__MSP430_BASEADDRESS_AES__, (unsigned char *) &RandomData, RandomNumbers);
     	//AES_decryptDataUsingEncryptionKey(__MSP430_BASEADDRESS_AES__, RandomNumbers, DataAESdecrypted);
     	P1OUT ^= BIT0;
 
-        #ifdef TEXT
-    	   Convert_To_ASCII_Binary((unsigned char *)&Timer, Timer_Value2, sizeof(Timer));
-    	   UART_TX((void *)Timer_Value2, sizeof(Timer_Value2));
+        #if defined TEXT_BINARY
+    	   Convert_To_ASCII_Binary(RandomNumbers, BinaryText, sizeof(RandomNumbers));
+    	   UART_TX(BinaryText, sizeof(BinaryText));
+        #elif defined TEXT_HEX
+    	   Convert_To_ASCII_Hex(RandomNumbers, HexText, sizeof(RandomNumbers));
+    	   Byte_Reverse(HexText, sizeof(HexText));
+    	   UART_TX(HexText, sizeof(HexText));
         #else
-    	   UART_TX((void *)RandomNumbers, sizeof(RandomNumbers));
+    	   UART_TX(RandomNumbers, sizeof(RandomNumbers));
         #endif
     }
   }
@@ -332,7 +343,7 @@ void Board_Init(void)
 void RTC_Init(void)
 {
   // Configure RTC_D
-  RTCCTL01 &= ~(RTCTEVIFG);                //Clear event interrupt
+  RTCCTL01 &= ~(RTCTEVIFG);               //Clear event interrupt
   RTCCTL01 |= RTCTEVIE + RTCHOLD;         //RTC hold, enable RTC
                                           // event interrupt
   RTCYEAR = 2013;                         // Year = 2011
@@ -342,8 +353,7 @@ void RTC_Init(void)
   RTCHOUR = 22;                           // Hour = 11
   RTCMIN = 59;                            // Minute = 59
   RTCSEC = 55;                            // Seconds = 55
-  //RTCCTL01|= RTCTEV_0;                      // Set RTCTEV for 1 minute alarm
-  RTCCTL01 &= ~(RTCHOLD);                   // Start RTC calendar mode
+  RTCCTL01 &= ~(RTCHOLD);                 // Start RTC calendar mode
 }
 
 void UART_Init (void)
@@ -359,18 +369,18 @@ void UART_Init (void)
    UCA0CTL1 &= ~UCSWRST;                     // **Initialize USCI state machine**
 }
 
-void UART_TX(void * data, unsigned char size)
+void UART_TX(unsigned char * data, unsigned char size)
 {
    unsigned int index = 0;
 
    for (index = size; index > 0; index--)
    {
-	   while (UCA0STAT & UCBUSY);   // wait for UART to be free
+      while (UCA0STAT & UCBUSY);   // wait for UART to be free
 
-	   UCA0TXBUF = *((unsigned char *)data + (index - 1));	// transmit random byte data
+      UCA0TXBUF = data[index - 1];	// transmit random byte data
    }
 
-   #ifdef TEXT
+   #if (defined TEXT_BINARY || defined TEXT_HEX)
       while (UCA0STAT & UCBUSY);   // wait for UART to be free
 
       UCA0TXBUF = 0x0D;	// transmit CR
@@ -381,7 +391,7 @@ void UART_TX(void * data, unsigned char size)
    #endif
 }
 
-void Convert_To_ASCII_Binary(unsigned char * randData, unsigned char * BinaryData, unsigned char size)
+void Convert_To_ASCII_Binary(unsigned char * input, unsigned char * output, unsigned char size)
 {
    unsigned int i = 0, j = 0;
    unsigned int window = 0;
@@ -389,11 +399,11 @@ void Convert_To_ASCII_Binary(unsigned char * randData, unsigned char * BinaryDat
 
    for (i = 0; i < size; i++)
    {
-      temp = randData[i];
+      temp = input[i];
 
-      for (j = window; j < window + 8; j++)
+      for (j = window + 8; j > window; j--)
       {
-    	  BinaryData[j] = (temp % 2) + 0x30;
+    	  output[j - 1] = (temp % 2) + 0x30;
     	  temp = temp >> 1;
       }
 
@@ -404,28 +414,39 @@ void Convert_To_ASCII_Binary(unsigned char * randData, unsigned char * BinaryDat
 void Convert_To_ASCII_Hex(unsigned char * input, unsigned char * output, unsigned char size)
 {
 	unsigned int index = 0;
-	unsigned char * temp_in = input;
-	unsigned char * temp_out = output;
 
 	for (index = 0; index < size; index++)
 	{
-		if ((*temp_in & 0x0F) > 9)
-		   *output = (*temp_in & 0x0F) + 0x37;
+		if ((input[index] & 0x0F) > 9)
+		   output[index << 1] = (input[index] & 0x0F) + 0x37;
 		else
-		   *output = (*temp_in & 0x0F) + 0x30;
+		   output[index << 1] = (input[index] & 0x0F) + 0x30;
 
-		output += 1;
-
-		if (((*temp_in >> 4) & 0x0F) > 9)
-           *output = ((*temp_in >> 4) & 0x0F) + 0x37;
+		if (((input[index] >> 4) & 0x0F) > 9)
+           output[(index << 1) + 1] = ((input[index] >> 4) & 0x0F) + 0x37;
 		else
-		   *output = ((*temp_in >> 4) & 0x0F) + 0x30;
-
-		output += 1;
-		temp_in++;
+		   output[(index << 1) + 1] = ((input[index] >> 4) & 0x0F) + 0x30;
 	}
+}
 
-	output = temp_out;
+void Byte_Reverse(unsigned char * data, unsigned char size)
+{
+   unsigned int index = 0;
+
+   unsigned char * temp = (unsigned char *)malloc(size);
+
+   for (index = 0; index < size; index += 2)
+   {
+      temp[index] = data[size - index - 2];
+      temp[index + 1] = data[size - index - 1];
+   }
+
+   for (index = 0; index < size; index++)
+   {
+	   data[index] = temp[index];
+   }
+
+   free(temp);
 }
 
 unsigned char AES_setCipherKey (unsigned int baseAddress,
@@ -485,7 +506,7 @@ unsigned char AES_encryptData (unsigned int baseAddress,
 	{
 		tempData = HWREG(baseAddress + OFS_AESADOUT);
 		*(encryptedData + i) = (unsigned char)tempData;
-		*(encryptedData +i + 1) = (unsigned char)(tempData >> 8);
+		*(encryptedData + i + 1) = (unsigned char)(tempData >> 8);
 
 
 	}
