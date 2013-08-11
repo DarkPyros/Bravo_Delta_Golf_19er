@@ -23,6 +23,6 @@ unsigned char AES_setCipherKey (unsigned int,const unsigned char *);
 unsigned char AES_encryptData (unsigned int,const unsigned char *,unsigned char *);
 unsigned char AES_decryptDataUsingEncryptionKey (unsigned int,const unsigned char *, unsigned char *);
 unsigned char AES_encryptDataBlock(unsigned int baseAddress, unsigned char * Data, unsigned char * encryptedData, unsigned char * IV, unsigned int Length );
-unsigned char AES_decryptDataBlock(unsigned int baseAddress, unsigned char * Data, unsigned char * decryptedData, unsigned char * IV, unsigned int Length, const unsigned char Mode);
+unsigned char AES_decryptDataBlock(unsigned int baseAddress, unsigned char * Data, unsigned char * decryptedData, unsigned char * IV, unsigned int Length);
 unsigned char AES_generateFirstRoundKey (unsigned int baseAddress, const unsigned char * CipherKey);
 unsigned char AES_decryptData (unsigned int baseAddress, const unsigned char * Data, unsigned char * decryptedData);

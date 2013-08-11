@@ -150,8 +150,7 @@ unsigned char AES_decryptDataBlock(unsigned int baseAddress,
         unsigned char * Data,
         unsigned char * decryptedData,
         unsigned char * IV,
-        unsigned int Length,
-        const unsigned char Mode)
+        unsigned int Length)
 {
     // crypto operations must be carried out locally in case we are encrypting in-place
     unsigned char inbuff[16], outbuff[16];
