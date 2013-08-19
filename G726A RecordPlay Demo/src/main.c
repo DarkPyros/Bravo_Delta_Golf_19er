@@ -188,7 +188,7 @@ _FWDT(FWDTEN_OFF);
 int rawSamples	[G726A_FRAME_SIZE]; 
 int decodedSamples [G726A_FRAME_SIZE];
 unsigned char encodedSamples[G726A_FRAME_SIZE];
-unsigned char packedData[G726A_FRAME_SIZE];
+unsigned char packedData[PACKED_BYTES];
 unsigned char encoder[G726A_ENCODER_SIZE];
 unsigned char decoder[G726A_DECODER_SIZE];
 
@@ -258,9 +258,14 @@ int main(void)
 	unsigned char i;
 	int j = 0;	/* FOR TESTING PURPOSES ONLY */
 	
-	/* packedBytes is the number of bytes returned
-     * by G726APack() and input for G726AUnpack() */ 
+	/* FOR TESTING PURPOSES ONLY
+	 * packedBytes is the number of bytes returned
+     * by G726APack() and input for G726AUnpack()
+	 * for loop clears bytesPerFrame array */ 
 	int packedBytes;
+
+	for(;j<500;j++)
+		bytesPerFrame[j] = 0;
 
 	/* Configure Oscillator to operate the device at 80MHz / 40 MIPS.
 	 * Fosc= Fin*M/(N1*N2), Fcy=Fosc/2
@@ -390,9 +395,11 @@ int main(void)
 
 				/* Causes compile warning due to passing unsigned char* to char* argument */
 				currentWriteAddress += SFMWrite(currentWriteAddress,
-							encodedSamples, packedBytes);
+							packedData, PACKED_BYTES);
 			
 				/*FOR TESTING PURPOSES ONLY - record byte size of packedData per Frame */
+				if(j >= 500)
+					j = 0;
 				bytesPerFrame[j] = packedBytes;
 				j++;
 
@@ -419,7 +426,7 @@ int main(void)
 
 			/* Causes compile warning due to passing unsigned char* to char* argument */
 			userPlaybackAddress += SFMRead(userPlaybackAddress,
-							encodedSamples, G726A_FRAME_SIZE);
+							packedData, PACKED_BYTES);
 			
 			if(userPlaybackAddress >= currentWriteAddress)
 			{
