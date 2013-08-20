@@ -211,7 +211,12 @@ int WM8510IOCtl(WM8510Handle * pHandle,int command, void * value)
 void __attribute__((__interrupt__,no_auto_psv)) _DCIInterrupt(void)
 {
 	_DCIIF = 0;;
-	
+
+/*FOR TESTING PURPOSES ONLY
+ *measure how often interrupt executes.
+ */	
+/*	LATCbits.LATC14 ^= 1; */
+
 	/* Send and Recieve Samples */
 	
 	thisWM8510Codec->activeInputBuffer[thisWM8510Codec->currentSampleIndex] = RXBUF0;
@@ -243,6 +248,11 @@ void __attribute__((__interrupt__,no_auto_psv)) _DCIInterrupt(void)
 		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
 		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_WRITE_BUSY;
 	}
+
+/*FOR TESTING PURPOSES ONLY
+ *measure interrupt execution time.
+ */	
+/*	LATCbits.LATC14 ^= 1; */
 }
 
 void WM8510SampleRate8KConfig(WM8510Handle *codecHandle)

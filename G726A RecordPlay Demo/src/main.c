@@ -304,9 +304,6 @@ int main(void)
 	 * output frame	*/
 	while(1)
 	{
-		/*Obtain Audio Samples	*/
-		while(WM8510IsReadBusy(codecHandle));
-		WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);
 
 		/* Playback the intro message if record or play functions 
 		 * are not active. Read SFM from address 0 where the intro
@@ -382,6 +379,16 @@ int main(void)
 				
 				YELLOW_LED = SASK_LED_ON;
 
+/*FOR TESTING PURPOSES ONLY
+ *measure encode and pack execution time.
+ */	
+	LATCbits.LATC14 ^= 1;
+
+				/*Obtain Audio Samples	*/
+				while(WM8510IsReadBusy(codecHandle));
+				WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);
+
+
 			    for(i = 0; i < G726A_FRAME_SIZE; i ++)
 			    {
 			        // Not necessary if its known that input
@@ -392,6 +399,11 @@ int main(void)
         		G726AEncode(encoder,rawSamples,encodedSamples);
 				
 				packedBytes = G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
+
+/*FOR TESTING PURPOSES ONLY
+ *measure encode and pack execution time.
+ */	
+	LATCbits.LATC14 ^= 1;
 
 				/* Causes compile warning due to passing unsigned char* to char* argument */
 				currentWriteAddress += SFMWrite(currentWriteAddress,
