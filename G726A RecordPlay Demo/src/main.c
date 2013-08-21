@@ -165,6 +165,7 @@
 
 #include "..\h\G726A.h"
 #include "..\h\G726APack.h"
+#include "..\h\main.h"
 
 /* Disable clock write protection
  * Select Primary osc w/ PLL
@@ -184,6 +185,7 @@ _FWDT(FWDTEN_OFF);
 #define SPEECH_SEGMENT_SIZE 29184L
 #define WRITE_START_ADDRESS	0x20000
 #define PACKED_BYTES 20
+
 /* Allocate state memory and IO buffers for G.726A encoder and decoder */
 int rawSamples	[G726A_FRAME_SIZE]; 
 int decodedSamples [G726A_FRAME_SIZE];
@@ -191,11 +193,6 @@ unsigned char encodedSamples[G726A_FRAME_SIZE];
 unsigned char packedData[PACKED_BYTES];
 unsigned char encoder[G726A_ENCODER_SIZE];
 unsigned char decoder[G726A_DECODER_SIZE];
-
-/*FOR TESTING PURPOSES ONLY
- *array to store the packedBytes values of each sample.
- */
-int bytesPerFrame[500];
 
 /* Allocate memory for buffers and drivers
  * codecBuffer - Buffer used by the codec driver
@@ -221,14 +218,9 @@ long userPlaybackAddress;
 long address;
 
 /* flags
- * record - if set means recording
- * playback - if set mean playback
- * erasedBeforeRecord - means SFM eras complete before record
+ * modeSelect - indicates if radio is in transmit mode
  * */
-
-int record;						
-int playback;					
-int erasedBeforeRecord;	
+int modeSelect = 3;
 
 int main(void)
 {
@@ -256,16 +248,6 @@ int main(void)
 
 	/* index values */
 	unsigned char i;
-	int j = 0;	/* FOR TESTING PURPOSES ONLY */
-	
-	/* FOR TESTING PURPOSES ONLY
-	 * packedBytes is the number of bytes returned
-     * by G726APack() and input for G726AUnpack()
-	 * for loop clears bytesPerFrame array */ 
-	int packedBytes;
-
-	for(;j<500;j++)
-		bytesPerFrame[j] = 0;
 
 	/* Configure Oscillator to operate the device at 80MHz / 40 MIPS.
 	 * Fosc= Fin*M/(N1*N2), Fcy=Fosc/2
@@ -304,17 +286,13 @@ int main(void)
 	 * output frame	*/
 	while(1)
 	{
-		/*Obtain Audio Samples	*/
-		while(WM8510IsReadBusy(codecHandle));
-		WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);
-
 		/* Playback the intro message if record or play functions 
 		 * are not active. Read SFM from address 0 where the intro
 		 * message is stored. Rewind the currentReadAddress if the
 		 * message has reached the end.
 		 * */
 		
-		if(!record && !playback)
+		if(modeSelect == 3)
 		{	
 			currentReadAddress += SFMRead(currentReadAddress, 
 				encodedSamples, G726A_FRAME_SIZE);
@@ -343,7 +321,7 @@ int main(void)
 
 		/* If record is enabled, encode the samples using G711. 
 		 * Store in flash. Erase flash before recording starts	*/
-		if(record == 1)
+		if(modeSelect == TRANSMIT_MODE)
 		{
 			if(erasedBeforeRecord == 0)
 			{
@@ -382,6 +360,10 @@ int main(void)
 				
 				YELLOW_LED = SASK_LED_ON;
 
+				/*Obtain Audio Samples	*/
+				while(WM8510IsReadBusy(codecHandle));
+				WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);				
+
 			    for(i = 0; i < G726A_FRAME_SIZE; i ++)
 			    {
 			        // Not necessary if its known that input
@@ -391,18 +373,13 @@ int main(void)
 
         		G726AEncode(encoder,rawSamples,encodedSamples);
 				
-				packedBytes = G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
+				/* Compresses 80 encoded samples into 20 bytes of data prior to transmission */
+				G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
 
 				/* Causes compile warning due to passing unsigned char* to char* argument */
 				currentWriteAddress += SFMWrite(currentWriteAddress,
 							packedData, PACKED_BYTES);
 			
-				/*FOR TESTING PURPOSES ONLY - record byte size of packedData per Frame */
-				if(j >= 500)
-					j = 0;
-				bytesPerFrame[j] = packedBytes;
-				j++;
-
 				if(currentWriteAddress >= SFM_LAST_ADDRESS)
 				{
 				
@@ -419,7 +396,7 @@ int main(void)
 		 * user area. Playback only till the last record address and then 
 		 * rewind to the start	*/
 		 
-		if(playback == 1)
+		if(modeSelect == RECEIVE_MODE)
 		{
 			GREEN_LED = SASK_LED_ON;
 			erasedBeforeRecord = 0;		
@@ -433,12 +410,12 @@ int main(void)
 				userPlaybackAddress = WRITE_START_ADDRESS;
 			}
 
+			/* Uncompresses 20 bytes of received data in 80 encoded samples */
 			G726AUnpack(packedData, encodedSamples, G726A_FRAME_SIZE, G726A_16KBPS);
 
-			/* Decode the samples	*/
+			/* Decode the samplesn*/
 			G726ADecode(decoder, encodedSamples, decodedSamples);
 
-			unsigned char i;
 			for(i = 0; i < G726A_FRAME_SIZE; i ++)
         	{
 	            /* Scale the decoded sample to 
@@ -459,18 +436,17 @@ int main(void)
 		
 		if((CheckSwitchS1()) == 1)
 		{
-			/* Toggle the record function and Yellow led.
+			/* Toggle the radio modeSelect to trasmit and leds.
 			 * Rewind the intro message playback pointer. 
-			 * And if recording, disable playback.
+			 * And if transmitting, disable playback.
 			 * */
 			 
 			
-			record =1;				
+			modeSelect = TRANSMIT_MODE;				
 			currentReadAddress = 0;	
 			erasedBeforeRecord = 0;
-			if(record == 1)
+			if(modeSelect == TRANSMIT_MODE)
 			{
-				playback = 0;
 				GREEN_LED = SASK_LED_OFF;
 
 			}
@@ -483,18 +459,17 @@ int main(void)
 		
 		if((CheckSwitchS2()) == 1)
 		{
-			/* Toggle the record function and AMBER led.
+			/* Toggle the record function and YELLOW led.
 			 * Rewind the intro message playback pointer. 
 			 * And if recording, disable playback.
 			 * */
 			 
 			GREEN_LED ^=1;
-			playback =1 ;
+			modeSelect = RECEIVE_MODE;
 			userPlaybackAddress = WRITE_START_ADDRESS;
 			currentReadAddress = 0;		
-			if(playback == 1)
+			if(modeSelect == RECEIVE_MODE)
 			{
-				record = 0;
 				YELLOW_LED = SASK_LED_OFF;
 			}
 		}

@@ -1,4 +1,5 @@
 #include "..\h\WM8510CodecDrv.h"
+#include "..\h\main.h"
 
 WM8510Handle *thisWM8510Codec;
 
@@ -212,36 +213,61 @@ void __attribute__((__interrupt__,no_auto_psv)) _DCIInterrupt(void)
 {
 	_DCIIF = 0;;
 	
-	/* Send and Recieve Samples */
-	
-	thisWM8510Codec->activeInputBuffer[thisWM8510Codec->currentSampleIndex] = RXBUF0;
-	TXBUF0 = thisWM8510Codec->activeOutputBuffer[thisWM8510Codec->currentSampleIndex];
-	thisWM8510Codec->currentSampleIndex++;
-	
-	if(thisWM8510Codec->currentSampleIndex == thisWM8510Codec->currentFrameSize)
+	/* Send or Recieve Samples */
+	if(modeSelect == TRANSMIT_MODE)
 	{
-		/* Transmitted one frame of data.
-		 * Recieved one frame of data.
-		 * Toggle the buffer indicator bit */
+		thisWM8510Codec->activeInputBuffer[thisWM8510Codec->currentSampleIndex] = RXBUF0;
+		thisWM8510Codec->currentSampleIndex++;
+		
+		if(thisWM8510Codec->currentSampleIndex == thisWM8510Codec->currentFrameSize)
+		{
+			/* dsPIC received one frame of data from codec.
+			 * Toggle the buffer indicator bit */
+		
+			thisWM8510Codec->statusFlag ^= WM8510DRV_TGL_BUFFER_IND;
+			if((thisWM8510Codec->statusFlag &	WM8510DRV_GET_BUFFER_IND) != 0)
+			{
+				/* Buffer indicator is 1 means use buffer2	*/
+				thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer2;
+			}
+			else
+			{
+				/* Buffer indicator is 0 means use buffer1	*/
+				thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer1;
+			}
+			/* Reset the sample index and update the sample count	*/
+			thisWM8510Codec->currentSampleIndex = 0;		
+			thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
+			thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
+		}
+	}
+	else
+	{
+		TXBUF0 = thisWM8510Codec->activeOutputBuffer[thisWM8510Codec->currentSampleIndex];
+		thisWM8510Codec->currentSampleIndex++;
 	
-		thisWM8510Codec->statusFlag ^= WM8510DRV_TGL_BUFFER_IND;
-		if((thisWM8510Codec->statusFlag &	WM8510DRV_GET_BUFFER_IND) != 0)
+		if(thisWM8510Codec->currentSampleIndex == thisWM8510Codec->currentFrameSize)
 		{
-			/* Buffer indicator is 1 means use buffer2	*/
-			thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer2;
-			thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer2;
+			/* dsPIC transmitted one frame of data to codec.
+			 * Toggle the buffer indicator bit */
+		
+			thisWM8510Codec->statusFlag ^= WM8510DRV_TGL_BUFFER_IND;
+			if((thisWM8510Codec->statusFlag &	WM8510DRV_GET_BUFFER_IND) != 0)
+			{
+				/* Buffer indicator is 1 means use buffer2	*/
+				thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer2;
+			}
+			else
+			{
+				/* Buffer indicator is 0 means use buffer1	*/
+				thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer1;
+			}
+			/* Reset the sample index and update the sample count	*/
+			thisWM8510Codec->currentSampleIndex = 0;		
+			thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
+			thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
+			thisWM8510Codec->statusFlag &= WM8510DRV_CLR_WRITE_BUSY;
 		}
-		else
-		{
-			/* Buffer indicator is 0 means use buffer1	*/
-			thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer1;
-			thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer1;
-		}
-		/* Reset the sample index and update the sample count	*/
-		thisWM8510Codec->currentSampleIndex = 0;		
-		thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
-		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
-		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_WRITE_BUSY;
 	}
 }
 
