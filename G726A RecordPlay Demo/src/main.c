@@ -211,44 +211,116 @@ SST25VF040BHandle flashMemoryHandle;
  * userPlaybackAddress - This one tracks user playback		
  * address - Used during flash erase
  * */
+long currentReadAddress = 0;		
+long currentWriteAddress = WRITE_START_ADDRESS;		
+long userPlaybackAddress = WRITE_START_ADDRESS;		
+long address = 0;
 
-long currentReadAddress;		
-long currentWriteAddress;		
-long userPlaybackAddress;		
-long address;
-
-/* flags
+/* Flags
+ * record - if set means recording
+ * playback - if set mean playback
+ * erasedBeforeRecord - means SFM eras complete before record
  * modeSelect - indicates if radio is in transmit mode
  * */
-int modeSelect = 3;
+int record = 0;						
+int playback = 0;					
+int erasedBeforeRecord = 0;
+int modeSelect = INTRO_PLAYBACK;
+
+/* Index values */
+unsigned char i;	
+
+/* Function Declarations */
+void audioCodecInit(void);
+void recordMode();
+void playbackMode();
+void introPlayback();
+void switchCheck();
 
 int main(void)
 {
-	/* Addresses 
-	 * currentReadAddress - This one tracks the intro message	
-	 * currentWriteAddress - This one tracks the writes to flash	
-	 * userPlaybackAddress - This one tracks user playback		
-	 * address - Used during flash erase
-	 * */
+	audioCodecInit();
+	
+	/* Main processing loop. Executed for every input and 
+	 * output frame	*/
+	while(1)
+	{
+		/* Playback the intro message if record or play functions 
+		 * are not active. Read SFM from address 0 where the intro
+		 * message is stored. Rewind the currentReadAddress if the
+		 * message has reached the end.
+		 * */
+		
+		if(modeSelect == INTRO_PLAYBACK)
+		{	
+			introPlayback();		
+		}
 
-	long currentReadAddress = 0;		
-	long currentWriteAddress = WRITE_START_ADDRESS;		
-	long userPlaybackAddress = WRITE_START_ADDRESS;		
-	long address = 0;							
+		/* If record is enabled, encode the samples using G726. 
+		 * Store in flash. Erase flash before recording starts	*/
+		if(modeSelect == RECORD_MODE)
+		{
+			recordMode();
+		}	/* End of record branch */
+		
+		/* If playback is enabled, then start playing back samples from the
+		 * user area. Playback only till the last record address and then 
+		 * rewind to the start	*/
+		 
+		if(modeSelect == PLAYBACK_MODE)
+		{
+			playbackMode();
+		}
 
-	/* flags
-	 * record - if set means recording
-	 * playback - if set mean playback
-	 * erasedBeforeRecord - means SFM eras complete before record
-	 * */
+		/* The CheckSwitch functions are defined in sask.c	*/
+		
+		if((CheckSwitchS1()) == 1)
+		{
+			/* Toggle the radio modeSelect to trasmit and leds.
+			 * Rewind the intro message playback pointer. 
+			 * And if transmitting, disable playback.
+			 * */
+			 
+			
+			modeSelect = RECORD_MODE;				
+			currentReadAddress = 0;	
+			erasedBeforeRecord = 0;
+			if(modeSelect == RECORD_MODE)
+			{
+				GREEN_LED = SASK_LED_OFF;
 
-	int record = 0;						
-	int playback = 0;					
-	int erasedBeforeRecord = 0;
+			}
+			else
+			{
+				YELLOW_LED = SASK_LED_OFF;
+			}
+		}
+		
+		
+		if((CheckSwitchS2()) == 1)
+		{
+			/* Toggle the record function and YELLOW led.
+			 * Rewind the intro message playback pointer. 
+			 * And if recording, disable playback.
+			 * */
+			 
+			GREEN_LED ^=1;
+			modeSelect = PLAYBACK_MODE;
+			userPlaybackAddress = WRITE_START_ADDRESS;
+			currentReadAddress = 0;		
+			if(modeSelect == PLAYBACK_MODE)
+			{
+				YELLOW_LED = SASK_LED_OFF;
+			}
+		}
+	
+	}	/* End of main processing loop */
 
-	/* index values */
-	unsigned char i;
+}	/* End of main() */
 
+/* Function definitions */
+void audioCodecInit()
+{
 	/* Configure Oscillator to operate the device at 80MHz / 40 MIPS.
 	 * Fosc= Fin*M/(N1*N2), Fcy=Fosc/2
 	 * Fosc= 12M*40/(3*4)=40Mhz for 12MHz input clock */
@@ -281,199 +353,138 @@ int main(void)
 	/* Initialize G.726A Encoder and Decoder. */
 	G726AEncoderInit(encoder, G726A_16KBPS, G726A_FRAME_SIZE);
 	G726ADecoderInit(decoder, G726A_16KBPS, G726A_FRAME_SIZE);
+}
 
-	/* Main processing loop. Executed for every input and 
-	 * output frame	*/
-	while(1)
+void introPlayback()
+{
+	currentReadAddress += SFMRead(currentReadAddress, 
+		encodedSamples, G726A_FRAME_SIZE);
+	if(currentReadAddress >= SPEECH_SEGMENT_SIZE)
 	{
-		/* Playback the intro message if record or play functions 
-		 * are not active. Read SFM from address 0 where the intro
-		 * message is stored. Rewind the currentReadAddress if the
-		 * message has reached the end.
+		currentReadAddress = 0;
+	}
+
+	/* Decode the samples	*/
+	G726ADecode(decoder, encodedSamples, decodedSamples);
+	
+	for(i = 0; i < G726A_FRAME_SIZE; i ++)
+	{
+		/* Scale the decoded sample to 
+		 * adjust for the 16 to 14-bit scaling done before
+		 * encode */
+		decodedSamples[i] = decodedSamples[i] << 2;
+	}
+
+	/* Wait till the codec is available for a new  frame	*/
+	while(WM8510IsWriteBusy(codecHandle));	
+
+	/* Write the frame to the output	*/
+	WM8510Write (codecHandle, decodedSamples, G726A_FRAME_SIZE);
+}
+
+void recordMode()
+{
+	if(erasedBeforeRecord == 0)
+	{
+		/* Stop the Audio input and output since this is a blocking
+		 * operation. Also rewind record and playback pointers to
+		 * start of the user flash area. Erase the user side of 
+		 * SFM memory blocks. Also set the erasedBeforeRecord flag
+		 * so that this is done only once before record. Start the
+		 * codec when the erase is complete.
+		 * */				 
+		WM8510Stop(codecHandle);
+		currentWriteAddress = WRITE_START_ADDRESS;
+		userPlaybackAddress = WRITE_START_ADDRESS;
+		RED_LED = SASK_LED_ON;
+		YELLOW_LED = SASK_LED_OFF;
+	
+		for(address = WRITE_START_ADDRESS; 
+				address < SFM_LAST_ADDRESS;
+				address += 0x10000)
+		{
+			SFMBlockErase(address);
+			
+		}
+		RED_LED = SASK_LED_OFF;		
+		 
+		erasedBeforeRecord = 1;
+		WM8510Start(codecHandle);
+	}
+	else
+	{	
+		/* Record the encoded audio frame. Yellow LED turns on when
+		 * when recording is being performed. Store the encoded
+		 * buffer into SFM. If the last SFM address is reached then
+		 * stop recording and start playback.
 		 * */
 		
-		if(modeSelect == 3)
-		{	
-			currentReadAddress += SFMRead(currentReadAddress, 
-				encodedSamples, G726A_FRAME_SIZE);
-			if(currentReadAddress >= SPEECH_SEGMENT_SIZE)
-			{
-				currentReadAddress = 0;
-			}
+		YELLOW_LED = SASK_LED_ON;
 
-			/* Decode the samples	*/
-			G726ADecode(decoder, encodedSamples, decodedSamples);
-			
-			for(i = 0; i < G726A_FRAME_SIZE; i ++)
-        	{
-	            /* Scale the decoded sample to 
-	             * adjust for the 16 to 14-bit scaling done before
-	             * encode */
-	            decodedSamples[i] = decodedSamples[i] << 2;
-			}
+		/*Obtain Audio Samples	*/
+		while(WM8510IsReadBusy(codecHandle));
+		WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);				
 
-			/* Wait till the codec is available for a new  frame	*/
-			while(WM8510IsWriteBusy(codecHandle));	
-		
-			/* Write the frame to the output	*/
-			WM8510Write (codecHandle, decodedSamples, G726A_FRAME_SIZE);		
+		for(i = 0; i < G726A_FRAME_SIZE; i ++)
+		{
+			// Not necessary if its known that input
+			// is 14 bits or less.			
+			rawSamples[i] = rawSamples[i] >> 2;
 		}
 
-		/* If record is enabled, encode the samples using G711. 
-		 * Store in flash. Erase flash before recording starts	*/
-		if(modeSelect == TRANSMIT_MODE)
-		{
-			if(erasedBeforeRecord == 0)
-			{
-				/* Stop the Audio input and output since this is a blocking
-				 * operation. Also rewind record and playback pointers to
-				 * start of the user flash area. Erase the user side of 
-				 * SFM memory blocks. Also set the erasedBeforeRecord flag
-				 * so that this is done only once before record. Start the
-				 * codec when the erase is complete.
-				 * */				 
-				WM8510Stop(codecHandle);
-				currentWriteAddress = WRITE_START_ADDRESS;
-				userPlaybackAddress = WRITE_START_ADDRESS;
-				RED_LED = SASK_LED_ON;
-				YELLOW_LED = SASK_LED_OFF;
-			
-				for(address = WRITE_START_ADDRESS; 
-						address < SFM_LAST_ADDRESS;
-					   	address += 0x10000)
-				{
-					SFMBlockErase(address);
-					
-				}
-				RED_LED = SASK_LED_OFF;		
-				 
-				erasedBeforeRecord = 1;
-				WM8510Start(codecHandle);
-			}
-			else
-			{	
-				/* Record the encoded audio frame. Yellow LED turns on when
-				 * when recording is being performed. Store the encoded
-				 * buffer into SFM. If the last SFM address is reached then
-				 * stop recording and start playback.
-				 * */
-				
-				YELLOW_LED = SASK_LED_ON;
-
-				/*Obtain Audio Samples	*/
-				while(WM8510IsReadBusy(codecHandle));
-				WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);				
-
-			    for(i = 0; i < G726A_FRAME_SIZE; i ++)
-			    {
-			        // Not necessary if its known that input
-			        // is 14 bits or less.			
-			        rawSamples[i] = rawSamples[i] >> 2;
-			    }
-
-        		G726AEncode(encoder,rawSamples,encodedSamples);
-				
-				/* Compresses 80 encoded samples into 20 bytes of data prior to transmission */
-				G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
-
-				/* Causes compile warning due to passing unsigned char* to char* argument */
-				currentWriteAddress += SFMWrite(currentWriteAddress,
-							packedData, PACKED_BYTES);
-			
-				if(currentWriteAddress >= SFM_LAST_ADDRESS)
-				{
-				
-					YELLOW_LED = SASK_LED_OFF;
-					erasedBeforeRecord = 0;
-					record = 0;
-					playback = 1;
-				}
-			}
-				
-		}	/* End of record branch */
+		G726AEncode(encoder,rawSamples,encodedSamples);
 		
-		/* If playback is enabled, then start playing back samples from the
-		 * user area. Playback only till the last record address and then 
-		 * rewind to the start	*/
-		 
-		if(modeSelect == RECEIVE_MODE)
-		{
-			GREEN_LED = SASK_LED_ON;
-			erasedBeforeRecord = 0;		
+		/* Compresses 80 encoded samples into 20 bytes of data prior to transmission */
+		G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
 
-			/* Causes compile warning due to passing unsigned char* to char* argument */
-			userPlaybackAddress += SFMRead(userPlaybackAddress,
-							packedData, PACKED_BYTES);
-			
-			if(userPlaybackAddress >= currentWriteAddress)
-			{
-				userPlaybackAddress = WRITE_START_ADDRESS;
-			}
-
-			/* Uncompresses 20 bytes of received data in 80 encoded samples */
-			G726AUnpack(packedData, encodedSamples, G726A_FRAME_SIZE, G726A_16KBPS);
-
-			/* Decode the samplesn*/
-			G726ADecode(decoder, encodedSamples, decodedSamples);
-
-			for(i = 0; i < G726A_FRAME_SIZE; i ++)
-        	{
-	            /* Scale the decoded sample to 
-	             * adjust for the 16 to 14-bit scaling done before
-	             * encode */
-	            decodedSamples[i] = decodedSamples[i] << 2;
-			}
-
-			/* Wait till the codec is available for a new  frame	*/
-			while(WM8510IsWriteBusy(codecHandle));	
-		
-			/* Write the frame to the output	*/
-			WM8510Write (codecHandle,decodedSamples,G726A_FRAME_SIZE);
-		
-		}
-
-		/* The CheckSwitch functions are defined in sask.c	*/
-		
-		if((CheckSwitchS1()) == 1)
-		{
-			/* Toggle the radio modeSelect to trasmit and leds.
-			 * Rewind the intro message playback pointer. 
-			 * And if transmitting, disable playback.
-			 * */
-			 
-			
-			modeSelect = TRANSMIT_MODE;				
-			currentReadAddress = 0;	
-			erasedBeforeRecord = 0;
-			if(modeSelect == TRANSMIT_MODE)
-			{
-				GREEN_LED = SASK_LED_OFF;
-
-			}
-			else
-			{
-				YELLOW_LED = SASK_LED_OFF;
-			}
-		}
-		
-		
-		if((CheckSwitchS2()) == 1)
-		{
-			/* Toggle the record function and YELLOW led.
-			 * Rewind the intro message playback pointer. 
-			 * And if recording, disable playback.
-			 * */
-			 
-			GREEN_LED ^=1;
-			modeSelect = RECEIVE_MODE;
-			userPlaybackAddress = WRITE_START_ADDRESS;
-			currentReadAddress = 0;		
-			if(modeSelect == RECEIVE_MODE)
-			{
-				YELLOW_LED = SASK_LED_OFF;
-			}
-		}
+		/* Causes compile warning due to passing unsigned char* to char* argument */
+		currentWriteAddress += SFMWrite(currentWriteAddress,
+					packedData, PACKED_BYTES);
 	
-	}	/* End of main processing loop */
+		if(currentWriteAddress >= SFM_LAST_ADDRESS)
+		{
+		
+			YELLOW_LED = SASK_LED_OFF;
+			erasedBeforeRecord = 0;
+			record = 0;
+			playback = 1;
+		}
+	}
+}
 
-}	/* End of main() */
+void playbackMode()
+{
+	GREEN_LED = SASK_LED_ON;
+	erasedBeforeRecord = 0;		
+
+	/* Causes compile warning due to passing unsigned char* to char* argument */
+	userPlaybackAddress += SFMRead(userPlaybackAddress,
+					packedData, PACKED_BYTES);
+	
+	if(userPlaybackAddress >= currentWriteAddress)
+	{
+		userPlaybackAddress = WRITE_START_ADDRESS;
+	}
+
+	/* Uncompresses 20 bytes of received data in 80 encoded samples */
+	G726AUnpack(packedData, encodedSamples, G726A_FRAME_SIZE, G726A_16KBPS);
+
+	/* Decode the samplesn*/
+	G726ADecode(decoder, encodedSamples, decodedSamples);
+
+	for(i = 0; i < G726A_FRAME_SIZE; i ++)
+	{
+		/* Scale the decoded sample to 
+		 * adjust for the 16 to 14-bit scaling done before
+		 * encode */
+		decodedSamples[i] = decodedSamples[i] << 2;
+	}
+
+	/* Wait till the codec is available for a new  frame	*/
+	while(WM8510IsWriteBusy(codecHandle));	
+
+	/* Write the frame to the output	*/
+	WM8510Write (codecHandle,decodedSamples,G726A_FRAME_SIZE);
+}
+
+		

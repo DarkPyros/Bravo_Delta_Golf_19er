@@ -214,7 +214,7 @@ void __attribute__((__interrupt__,no_auto_psv)) _DCIInterrupt(void)
 	_DCIIF = 0;;
 	
 	/* Send or Recieve Samples */
-	if(modeSelect == TRANSMIT_MODE)
+	if(modeSelect == RECORD_MODE)
 	{
 		thisWM8510Codec->activeInputBuffer[thisWM8510Codec->currentSampleIndex] = RXBUF0;
 		thisWM8510Codec->currentSampleIndex++;
