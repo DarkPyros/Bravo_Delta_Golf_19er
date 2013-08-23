@@ -16,6 +16,7 @@ void Init (void)
 	Board_Init();
 	Clock_Init();
 	RTC_Init();
+	UART_Init();
 	Timer_Init();
 }
 
@@ -106,10 +107,19 @@ void RTC_Init(void)
 
 void Timer_Init (void)
 {
-	TA1EX0 = 0x0004;
-	//TA1CCTL0 = 0x0080;
-	//TA1CCR0 = 0x0000;
-	TA1CTL = TASSEL_2 + ID_2 + MC_2 + TACLR;	//Reset and activate Counter
+	// Reset and activate timer TA1
+	Timer_Reset();
 }
 
+void Timer_Reset (void)
+{
+	// Set TAIDEX to 4 for a clock divider of /5
+	TA1EX0 = 0x0004;
 
+	// TASSEL_2 = set timer clock source to SMCLK
+	// ID_2 = set clock divider to /4, along with TAIDEX for
+	//        a total clock divider of /20
+	// MC_2 = continuous up counting
+	// TACLR = resets and activates the timer counter
+	TA1CTL = TASSEL_2 + ID_2 + MC_2 + TACLR;	//Reset and activate Counter
+}

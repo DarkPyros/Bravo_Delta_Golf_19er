@@ -37,7 +37,7 @@ struct NONCE{
 	char minute;
 	char second;
 	char seed_channel;
-	unsigned long long somebits;
+	unsigned long long counter;
 };
 
 unsigned char AES_setCipherKey (unsigned int,const unsigned char *);

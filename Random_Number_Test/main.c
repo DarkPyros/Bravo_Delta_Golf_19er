@@ -81,11 +81,12 @@
 //   Built with IAR Embedded Workbench V5.40.1 & Code Composer Studio V5.2
 //******************************************************************************
 
-#include <msp430.h>
-#include <stdlib.h>
 #include "init.h"
-#include "debug.h"
-#include "aes.h"
+
+unsigned char CipherKey[16] = {	0x2b, 0x7e, 0x15, 0x16,
+  								0x28, 0xae, 0xd2, 0xa6,
+  								0xab, 0xf7, 0x15, 0x88,
+  								0x09, 0xcf, 0x4f, 0x3c };
 
 unsigned char RandomNumbers[16] = {	0x00, 0x00, 0x00, 0x00,
 								    0x00, 0x00, 0x00, 0x00,
@@ -96,21 +97,10 @@ struct NONCE Nonce;
 
 int main (void)
 {
-	unsigned char CipherKey[16] = {	0x2b, 0x7e, 0x15, 0x16,
-  									0x28, 0xae, 0xd2, 0xa6,
-  									0xab, 0xf7, 0x15, 0x88,
-  									0x09, 0xcf, 0x4f, 0x3c };
-
-	unsigned char Data[16] = { 0x6b, 0xc1, 0xbe, 0xe2,
-  							   0x2e, 0x40, 0x9f, 0x96,
-  							   0xe9, 0x3d, 0x7e, 0x11,
-  							   0x73, 0x93, 0x17, 0x2a };
-
 	unsigned char Button_Press = 0;
 	unsigned int Timer = 0;
 
 	Init();
-	UART_Init();
 
 	AES_setCipherKey(__MSP430_BASEADDRESS_AES__, CipherKey);
 
@@ -121,7 +111,7 @@ int main (void)
 	Nonce.minute = (char)RTCMIN;
 	Nonce.second = (char)RTCSEC;
 	Nonce.seed_channel = 0xAA;
-	Nonce.somebits = 0xAAAAAAAAAAAAAAAALL;
+	Nonce.counter = 0xAAAAAAAAAAAAAAAALL;
 
 	while(1)
 	{
@@ -152,9 +142,11 @@ int main (void)
 				Timer = TA1R;
 			} while (Timer != TA1R);
 
-			Nonce.somebits += Timer;
-			TA1CTL = TASSEL_2 + ID_2 + MC_2 + TACLR;	//Reset and activate Counter
-			AES_encryptData(__MSP430_BASEADDRESS_AES__, Data, RandomNumbers);
+			Nonce.counter += Timer;
+
+			Timer_Reset();
+
+			AES_encryptData(__MSP430_BASEADDRESS_AES__, (unsigned char *) &Nonce, RandomNumbers);
 			P1OUT ^= BIT0;
 
 			#if defined TEXT_BINARY
