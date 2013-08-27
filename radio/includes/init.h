@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include "debug.h"
 #include "aes.h"
+#include "radio.h"
+#include "hal_pmm.h"
 
 void Init (void);
 void Board_Init (void);
@@ -19,5 +21,6 @@ void Clock_Init (void);
 void RTC_Init (void);
 void Timer_Init (void);
 void Timer_Reset (void);
+void Radio_Init (void);
 
 #endif /* INIT_H_ */

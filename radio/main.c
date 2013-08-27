@@ -83,6 +83,8 @@
 
 #include "init.h"
 
+
+
 unsigned char CipherKey[16] = {	0x2b, 0x7e, 0x15, 0x16,
   								0x28, 0xae, 0xd2, 0xa6,
   								0xab, 0xf7, 0x15, 0x88,
@@ -100,7 +102,14 @@ int main (void)
 	unsigned char Button_Press = 0;
 	unsigned int Timer = 0;
 
+	// Increase PMMCOREV level to 2 in order to avoid low voltage error
+	// when the RF core is enabled
+	SetVCore(2);
+
 	Init();
+
+	Strobe(RF_SIDLE);
+	Strobe(RF_SRX);
 
 	AES_setCipherKey(__MSP430_BASEADDRESS_AES__, CipherKey);
 
