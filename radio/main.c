@@ -81,100 +81,85 @@
 //   Built with IAR Embedded Workbench V5.40.1 & Code Composer Studio V5.2
 //******************************************************************************
 
-#include <msp430.h>
-#include "radio.h"
+#include "init.h"
 
-void Board_Init(void);
-void Clock_Init(void);
+unsigned char CipherKey[16] = {	0x2b, 0x7e, 0x15, 0x16,
+  								0x28, 0xae, 0xd2, 0xa6,
+  								0xab, 0xf7, 0x15, 0x88,
+  								0x09, 0xcf, 0x4f, 0x3c };
+
+unsigned char RandomNumbers[16] = {	0x00, 0x00, 0x00, 0x00,
+								    0x00, 0x00, 0x00, 0x00,
+								    0x00, 0x00, 0x00, 0x00,
+								    0x00, 0x00, 0x00, 0x00 };
+
+struct NONCE Nonce;
 
 int main (void)
 {
-  WDTCTL = WDTPW + WDTHOLD;                 // Stop WDT
+	unsigned char Button_Press = 0;
+	unsigned int Timer = 0;
 
-  // Init board and clock
-  Board_Init();
-  Clock_Init();
+	Init();
 
-  while(1)
-  {
+	AES_setCipherKey(__MSP430_BASEADDRESS_AES__, CipherKey);
 
+	Nonce.year = (int)RTCYEAR;
+	Nonce.month = (char)RTCMON;
+	Nonce.day = (char)RTCDAY;
+	Nonce.hour = (char)RTCHOUR;
+	Nonce.minute = (char)RTCMIN;
+	Nonce.second = (char)RTCSEC;
+	Nonce.seed_channel = 0xAA;
+	Nonce.counter = 0xAAAAAAAAAAAAAAAALL;
 
+	while(1)
+	{
+		if ((P1IN & BIT7) == 0)
+		{
+			#ifndef DEBUG
+				__delay_cycles(6000000); // Switch debounce = 300ms @ 20 MHz
+			#endif
 
-  }
+			if (Button_Press == 0)
+				Button_Press = 1;
+			else
+				Button_Press = 0;
+		}
+
+		if (Button_Press == 1)
+		{
+			P1OUT ^= BIT0;
+			Nonce.year = (int)RTCYEAR;
+			Nonce.month = (char)RTCMON;
+			Nonce.day = (char)RTCDAY;
+			Nonce.hour = (char)RTCHOUR;
+			Nonce.minute = (char)RTCMIN;
+			Nonce.second = (char)RTCSEC;
+
+			do
+			{
+				Timer = TA1R;
+			} while (Timer != TA1R);
+
+			Nonce.counter += Timer;
+
+			Timer_Reset();
+
+			AES_encryptData(__MSP430_BASEADDRESS_AES__, (unsigned char *) &Nonce, RandomNumbers);
+			P1OUT ^= BIT0;
+
+			#if defined TEXT_BINARY
+				Convert_To_ASCII_Binary(RandomNumbers, BinaryText, sizeof(RandomNumbers));
+				UART_TX(BinaryText, sizeof(BinaryText));
+			#elif defined TEXT_HEX
+				Convert_To_ASCII_Hex(RandomNumbers, HexText, sizeof(RandomNumbers));
+				Byte_Reverse(HexText, sizeof(HexText));
+				UART_TX(HexText, sizeof(HexText));
+			#else
+				UART_TX(RandomNumbers, sizeof(RandomNumbers));
+			#endif
+		}
+	}
 }
 
-/*
-#pragma vector=RTC_VECTOR
-__interrupt void RTCISR (void)
-{
-  RTCCTL01&= ~(RTCTEVIFG);                //Clear event interrupt
-  RTCCTL01 &= ~(RTCTEVIE);                //Clear interrupt enable
- // __bic_SR_register_on_exit(LPM4_bits);     // Exit LPM3.5
-  __no_operation();
-}
-*/
-
-void Clock_Init(void)
-{
-  // Setup Clock
-  P5SEL |= BIT0 + BIT1;                     // Port select XT1
-  UCSCTL6 |= XCAP_3 + XT1OFF + XT2OFF;      // Internal load cap
-                                            // XT1 and XT2 off
-  // Loop until XT1 & DCO stabilizes - In this case loop until XT1 and DCO settle
-  do
-  {
-	UCSCTL7 &= ~(XT1LFOFFG + DCOFFG);
-                                            // Clear XT1,DCO fault flags
-	SFRIFG1 &= ~OFIFG;                  // Clear fault flags
-  }while (SFRIFG1&OFIFG);                   // Test oscillator fault flag
-
-  UCSCTL6 &= ~(XT1DRIVE_3);                 // Xtal is now stable, reduce drive
-                                            // strength
-
-  PMAPPWD = 0x02D52;                        // Get write-access to port mapping regs
-  P2MAP0 = PM_ACLK;                         // Map ACLK output to P2.0
-  P2MAP2 = PM_MCLK;                         // Map MCLK output to P2.2
-  P2MAP4 = PM_SMCLK;                        // Map SMCLK output to P2.4
-  PMAPPWD = 0;                              // Lock port mapping registers
-
-  P2DIR |= BIT0 + BIT2 + BIT4;              // ACLK, MCLK, SMCLK set out to pins
-  P2SEL |= BIT0 + BIT2 + BIT4;              // P2.0,2,4 for debugging purposes.
-
-  UCSCTL3 |= SELREF_2;                      // Set DCO FLL reference = REFO
-  UCSCTL4 |= SELA_2;                        // Set ACLK = REFO
-
-  __bis_SR_register(SCG0);                  // Disable the FLL control loop
-  UCSCTL0 = 0x0000;                         // Set lowest possible DCOx, MODx
-  UCSCTL1 = DCORSEL_7;                      // Select DCO range 24MHz operation
-  UCSCTL2 = FLLD_1 + 614;                   // Set DCO Multiplier for 12MHz
-                                            // (N + 1) * FLLRef = Fdco
-                                            // (374 + 1) * 32768 = 12MHz
-                                            // Set FLL Div = fDCOCLK/2
-  __bic_SR_register(SCG0);                  // Enable the FLL control loop
-
-  // Worst-case settling time for the DCO when the DCO range bits have been
-  // changed is n x 32 x 32 x f_MCLK / f_FLL_reference. See UCS chapter in 5xx
-  // UG for optimization.
-  // 32 x 32 x 12 MHz / 32,768 Hz = 375000 = MCLK cycles for DCO to settle
-  __delay_cycles(625000);
-
-  // Loop until XT1,XT2 & DCO fault flag is cleared
-  do
-  {
-    UCSCTL7 &= ~(XT2OFFG + XT1LFOFFG + XT1HFOFFG + DCOFFG);
-                                            // Clear XT2,XT1,DCO fault flags
-    SFRIFG1 &= ~OFIFG;                      // Clear fault flags
-  }while (SFRIFG1&OFIFG);                   // Test oscillator fault flag
-
-}
-
-void Board_Init(void)
-{
-  PMMCTL0_H = PMMPW_H;                      // open PMM
-  PM5CTL0 &= ~LOCKIO;                       // Clear LOCKBAK and enable ports
-  PMMCTL0_H = 0x00;                         // close PMM
-
-  // Port Configuration
-  P1OUT = 0x00;P2OUT = 0x00;P3OUT = 0x00;P4OUT = 0x00;P5OUT = 0x00;PJOUT = 0x00;
-  P1DIR = 0xFF;P2DIR = 0xFF;P3DIR = 0xFF;P4DIR = 0xFF;P5DIR = 0xFF;PJDIR = 0xFF;
-}
