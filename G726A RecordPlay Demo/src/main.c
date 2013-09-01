@@ -382,7 +382,7 @@ int main(void)
 /*FOR TESTING PURPOSES ONLY
  *measure encode and pack execution time.
  */	
-//	LATCbits.LATC14 ^= 1;
+//	LATCbits.LATC15 ^= 1;
 
 				/*Obtain Audio Samples	*/
 				while(WM8510IsReadBusy(codecHandle));
@@ -390,6 +390,7 @@ int main(void)
 /*FOR TESTING PURPOSES ONLY
  *measure encode and pack execution time.
  */	
+//	LATCbits.LATC15 ^= 1;
 //	LATCbits.LATC14 ^= 1;
 
 				WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);
@@ -459,7 +460,7 @@ int main(void)
 /*FOR TESTING PURPOSES ONLY
  *measure decode and unpack execution time.
  */	
-//	LATCbits.LATC14 ^= 1;
+	LATCbits.LATC14 ^= 1;
 
 			G726AUnpack(packedData, encodedSamples, G726A_FRAME_SIZE, G726A_16KBPS);
 
@@ -478,12 +479,12 @@ int main(void)
 /*FOR TESTING PURPOSES ONLY
  *measure decode and unpack execution time.
  */	
-//	LATCbits.LATC14 ^= 1;
+	LATCbits.LATC14 ^= 1;
 
 /*FOR TESTING PURPOSES ONLY
  *measure WM Codec write execution time.
  */	
-//	LATCbits.LATC14 ^= 1;
+	LATCbits.LATC15 ^= 1;
 
 			/* Wait till the codec is available for a new  frame	*/
 			while(WM8510IsWriteBusy(codecHandle));	
@@ -491,8 +492,8 @@ int main(void)
 /*FOR TESTING PURPOSES ONLY
  *measure WM Codec write execution time.
  */	
-//	LATCbits.LATC14 ^= 1;
-		
+	LATCbits.LATC15 ^= 1;
+//	LATCbits.LATC14 ^= 1;		
 			/* Write the frame to the output	*/
 			WM8510Write (codecHandle,decodedSamples,G726A_FRAME_SIZE);
 
