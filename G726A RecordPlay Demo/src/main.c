@@ -323,11 +323,11 @@ void audioCodecInit()
 {
 	/* Configure Oscillator to operate the device at 80MHz / 40 MIPS.
 	 * Fosc= Fin*M/(N1*N2), Fcy=Fosc/2
-	 * Fosc= 12M*40/(3*4)=40Mhz for 12MHz input clock */
+	 * Fosc= 12*40/(3*2)=80Mhz for 12MHz input clock */
  
 	PLLFBD=38;				/* M = PLLFBD + 2 = 40	*/
 	CLKDIVbits.PLLPRE=1;	/* N1 = PLLPRE + 2 = 3	*/
-	CLKDIVbits.PLLPOST=0;	/* N2 = PLLPOST + 2 = 4	*/
+	CLKDIVbits.PLLPOST=0;	/* N2 = PLLPOST + 2 = 2	*/
 	OSCTUN=0;			
 	
 	__builtin_write_OSCCONH(0x01);		/*	Initiate Clock Switch to FRC with PLL*/
