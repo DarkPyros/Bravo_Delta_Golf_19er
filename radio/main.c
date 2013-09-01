@@ -108,8 +108,8 @@ int main (void)
 
 	Init();
 
-	Strobe(RF_SIDLE);
-	Strobe(RF_SRX);
+	ReceiveOn();
+	receiving = 1;
 
 	AES_setCipherKey(__MSP430_BASEADDRESS_AES__, CipherKey);
 
@@ -158,6 +158,12 @@ int main (void)
 			AES_encryptData(__MSP430_BASEADDRESS_AES__, (unsigned char *) &Nonce, RandomNumbers);
 			P1OUT ^= BIT0;
 
+			Transmit( (unsigned char*)Nonce, sizeof(Nonce));
+
+			// wait while radio transmits
+		}
+		else
+		{
 			#if defined TEXT_BINARY
 				Convert_To_ASCII_Binary(RandomNumbers, BinaryText, sizeof(RandomNumbers));
 				UART_TX(BinaryText, sizeof(BinaryText));

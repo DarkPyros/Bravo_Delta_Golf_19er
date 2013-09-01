@@ -4,7 +4,7 @@
 
 SHELL = cmd.exe
 
-CG_TOOL_ROOT := C:/ti/ccsv5/tools/compiler/msp430_4.1.5
+CG_TOOL_ROOT := C:/ti/ccsv5/tools/compiler/msp430_4.1.6
 
 ORDERED_OBJS += \
 $(GEN_CMDS__FLAG) \
@@ -121,7 +121,7 @@ all: Fixed_LT_FIFO.out
 Fixed_LT_FIFO.out: $(OBJS) $(CMD_SRCS) $(GEN_CMDS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: MSP430 Linker'
-	"C:/ti/ccsv5/tools/compiler/msp430_4.1.5/bin/cl430" -vmspx --abi=eabi -O2 -g --define=MHZ_915 --define=__CC430F6147__ --diag_warning=225 --silicon_errata=CPU18 --silicon_errata=CPU21 --silicon_errata=CPU22 --silicon_errata=CPU23 --silicon_errata=CPU40 --printf_support=minimal -z --stack_size=80 -m"Fixed_LT_FIFO.map" --heap_size=80 --use_hw_mpy=F5 -i"C:/ti/ccsv5/ccs_base/msp430/include" -i"C:/ti/ccsv5/tools/compiler/msp430_4.1.5/lib" -i"C:/ti/ccsv5/tools/compiler/msp430_4.1.5/include" --reread_libs --warn_sections --rom_model -o "Fixed_LT_FIFO.out" $(ORDERED_OBJS)
+	"C:/ti/ccsv5/tools/compiler/msp430_4.1.6/bin/cl430" -vmspx --abi=eabi -O2 -g --define=MHZ_915 --define=__CC430F6147__ --diag_warning=225 --silicon_errata=CPU18 --silicon_errata=CPU21 --silicon_errata=CPU22 --silicon_errata=CPU23 --silicon_errata=CPU40 --printf_support=minimal -z --stack_size=80 -m"Fixed_LT_FIFO.map" --heap_size=80 --use_hw_mpy=F5 -i"C:/ti/ccsv5/ccs_base/msp430/include" -i"C:/ti/ccsv5/tools/compiler/msp430_4.1.6/lib" -i"C:/ti/ccsv5/tools/compiler/msp430_4.1.6/include" --reread_libs --warn_sections --rom_model -o "Fixed_LT_FIFO.out" $(ORDERED_OBJS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

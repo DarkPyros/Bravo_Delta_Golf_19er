@@ -8,7 +8,7 @@
 #include <msp430.h>
 #include "init.h"
 
-#define  PATABLE_VAL        (0x51)          // 0 dBm output
+//#define  PATABLE_VAL        (0x51)          // 0 dBm output
 
 // Chipcon
 // Product = CC430Fx13x
@@ -198,5 +198,99 @@ void Radio_Init(void)
   WriteRfSettings(&rfSettings);
 
   WriteSinglePATable(PATABLE_VAL);
+}
+
+void InitButtonLeds(void)
+{
+  // Set up the button as interruptible
+  P1DIR &= ~BIT7;
+  P1REN |= BIT7;
+  P1IES &= BIT7;
+  P1IFG = 0;
+  P1OUT |= BIT7;
+  P1IE  |= BIT7;
+
+  // Initialize Port J
+  PJOUT = 0x00;
+  PJDIR = 0xFF;
+
+  // Set up LEDs
+  P1OUT &= ~BIT0;
+  P1DIR |= BIT0;
+  P3OUT &= ~BIT6;
+  P3DIR |= BIT6;
+}
+
+void InitRadio(void)
+{
+  // Set the High-Power Mode Request Enable bit so LPM3 can be entered
+  // with active radio enabled
+  PMMCTL0_H = 0xA5;
+  PMMCTL0_L |= PMMHPMRE_L;
+  PMMCTL0_H = 0x00;
+
+  WriteRfSettings(&rfSettings);
+
+  WriteSinglePATable(PATABLE_VAL);
+}
+
+#pragma vector=PORT1_VECTOR
+__interrupt void PORT1_ISR(void)
+{
+  switch(__even_in_range(P1IV, 16))
+  {
+    case  0: break;
+    case  2: break;                         // P1.0 IFG
+    case  4: break;                         // P1.1 IFG
+    case  6: break;                         // P1.2 IFG
+    case  8: break;                         // P1.3 IFG
+    case 10: break;                         // P1.4 IFG
+    case 12: break;                         // P1.5 IFG
+    case 14: break;                         // P1.6 IFG
+    case 16:                                // P1.7 IFG
+      P1IE = 0;                             // Debounce by disabling buttons
+      buttonPressed = 1;
+      __bic_SR_register_on_exit(LPM3_bits); // Exit active
+      break;
+  }
+}
+
+void Transmit(unsigned char *buffer, unsigned char length)
+{
+  // It is possible that ReceiveOff is called while radio is receiving a packet.
+  // Therefore, it is necessary to flush the RX FIFO after issuing IDLE strobe
+  // such that the RXFIFO is empty prior to receiving a packet.
+  Strobe( RF_SIDLE );
+  Strobe( RF_SFTX  );
+
+  RF1AIES = BIT9;
+  RF1AIFG &= ~BIT9;                         // Clear pending interrupts
+  RF1AIE |= BIT9;                           // Enable TX end-of-packet interrupt
+
+  WriteBurstReg(RF_TXFIFOWR, buffer, length);
+
+  Strobe( RF_STX );                         // Strobe STX
+}
+
+void ReceiveOn(void)
+{
+  RF1AIES = BIT9;                           // Falling edge of RFIFG9
+  RF1AIFG &= ~BIT9;                         // Clear a pending interrupt
+  RF1AIE  |= BIT9;                          // Enable the interrupt
+
+  // Radio is in IDLE following a TX, so strobe SRX to enter Receive Mode
+  Strobe( RF_SRX );
+}
+
+void ReceiveOff(void)
+{
+  RF1AIE &= ~BIT9;                          // Disable RX interrupts
+  RF1AIFG &= ~BIT9;                         // Clear pending IFG
+
+  // It is possible that ReceiveOff is called while radio is receiving a packet.
+  // Therefore, it is necessary to flush the RX FIFO after issuing IDLE strobe
+  // such that the RXFIFO is empty prior to receiving a packet.
+  Strobe( RF_SIDLE );
+  Strobe( RF_SFRX  );
 }
 
