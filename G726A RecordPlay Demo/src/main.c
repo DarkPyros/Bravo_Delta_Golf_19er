@@ -161,7 +161,6 @@
 #include "..\h\p33FJ256GP506.h"
 #include "..\h\WM8510CodecDrv.h"
 #include "..\h\sask.h"
-#include "..\h\SFMDrv.h"
 
 #include "..\h\G726A.h"
 #include "..\h\G726APack.h"
@@ -177,13 +176,9 @@ _FOSCSEL(FNOSC_PRIPLL);
 _FOSC(FCKSM_CSECMD & OSCIOFNC_ON & POSCMD_EC);
 _FWDT(FWDTEN_OFF);
 
-/* SPEECH_SEGMENT_SIZE - Size of intro speech segment
- * WRITE_START_ADDRESS - Serial Flash Memory write address
- * PACKED_BYTES - The number of bytes contained in G726A
+/* PACKED_BYTES - The number of bytes contained in G726A
  *                 packed data array					
  */
-#define SPEECH_SEGMENT_SIZE 29184L
-#define WRITE_START_ADDRESS	0x20000
 #define PACKED_BYTES 20
 
 /* Allocate state memory and IO buffers for G.726A encoder and decoder */
@@ -199,22 +194,9 @@ unsigned char decoder[G726A_DECODER_SIZE];
  * flashMemoryBuffer - buffer used by the SFM driver
  * */
 int 	codecBuffer		[WM8510DRV_DRV_BUFFER_SIZE];
-char 	flashMemoryBuffer	[SFMDRV_BUFFER_SIZE];
 
 WM8510Handle codec;
 WM8510Handle * codecHandle = &codec;
-SST25VF040BHandle flashMemoryHandle; 
-
-/* Addresses 
- * currentReadAddress - This one tracks the intro message	
- * currentWriteAddress - This one tracks the writes to flash	
- * userPlaybackAddress - This one tracks user playback		
- * address - Used during flash erase
- * */
-long currentReadAddress = 0;		
-long currentWriteAddress = WRITE_START_ADDRESS;		
-long userPlaybackAddress = WRITE_START_ADDRESS;		
-long address = 0;
 
 /* Flags
  * record - if set means recording
@@ -224,103 +206,49 @@ long address = 0;
  * */
 int record = 0;						
 int playback = 0;					
-int erasedBeforeRecord = 0;
-int modeSelect = INTRO_PLAYBACK;
+int modeSelect = IDLE;
 
 /* Index values */
 unsigned char i;	
 
 /* Function Declarations */
 void audioCodecInit(void);
+void switchCheck();
 void recordMode();
 void playbackMode();
-void introPlayback();
-void switchCheck();
 
-int main(void)
-{
+
+int main(void) {
+	
 	audioCodecInit();
 	
-	/* Main processing loop. Executed for every input and 
-	 * output frame	*/
-	while(1)
-	{
-		/* Playback the intro message if record or play functions 
-		 * are not active. Read SFM from address 0 where the intro
-		 * message is stored. Rewind the currentReadAddress if the
-		 * message has reached the end.
-		 * */
+	/* Main processing loop. */
+	while(1) {
 		
-		if(modeSelect == INTRO_PLAYBACK)
-		{	
-			introPlayback();		
+		/* Audio controller is in idle mode */
+		if(modeSelect == IDLE){		
 		}
 
 		/* If record is enabled, encode the samples using G726. 
 		 * Store in flash. Erase flash before recording starts	*/
-		if(modeSelect == RECORD_MODE)
-		{
+		if(modeSelect == RECORD_MODE){
 			recordMode();
 		}	/* End of record branch */
 		
 		/* If playback is enabled, then start playing back samples from the
 		 * user area. Playback only till the last record address and then 
-		 * rewind to the start	*/
-		 
-		if(modeSelect == PLAYBACK_MODE)
-		{
+		 * rewind to the start	*/		 
+		if(modeSelect == PLAYBACK_MODE) {
 			playbackMode();
 		}
 
-		/* The CheckSwitch functions are defined in sask.c	*/
-		
-		if((CheckSwitchS1()) == 1)
-		{
-			/* Toggle the radio modeSelect to trasmit and leds.
-			 * Rewind the intro message playback pointer. 
-			 * And if transmitting, disable playback.
-			 * */
-			 
-			
-			modeSelect = RECORD_MODE;				
-			currentReadAddress = 0;	
-			erasedBeforeRecord = 0;
-			if(modeSelect == RECORD_MODE)
-			{
-				GREEN_LED = SASK_LED_OFF;
-
-			}
-			else
-			{
-				YELLOW_LED = SASK_LED_OFF;
-			}
-		}
-		
-		
-		if((CheckSwitchS2()) == 1)
-		{
-			/* Toggle the record function and YELLOW led.
-			 * Rewind the intro message playback pointer. 
-			 * And if recording, disable playback.
-			 * */
-			 
-			GREEN_LED ^=1;
-			modeSelect = PLAYBACK_MODE;
-			userPlaybackAddress = WRITE_START_ADDRESS;
-			currentReadAddress = 0;		
-			if(modeSelect == PLAYBACK_MODE)
-			{
-				YELLOW_LED = SASK_LED_OFF;
-			}
-		}
-	
+		switchCheck();
 	}	/* End of main processing loop */
-
 }	/* End of main() */
 
 /* Function definitions */
-void audioCodecInit()
-{
+	/* Initialization of audio controller*/
+void audioCodecInit() {
 	/* Configure Oscillator to operate the device at 80MHz / 40 MIPS.
 	 * Fosc= Fin*M/(N1*N2), Fcy=Fosc/2
 	 * Fosc= 12*40/(3*2)=80Mhz for 12MHz input clock */
@@ -335,16 +263,11 @@ void audioCodecInit()
 	while (OSCCONbits.COSC != 0b01);	/*	Wait for Clock switch to occur	*/
 	while(!OSCCONbits.LOCK);
 
-	/* Intialize the board and the drivers	*/
+	/* Initialize the board and the drivers	*/
 	SASKInit();
 	WM8510Init(codecHandle,codecBuffer);
 	
-	/* Open the flash and unprotect it so that
-	 * it can be written to.
-	 * */
-	SFMInit(flashMemoryBuffer);
-
-	/* Start Audio input and output function	*/
+	/* Start Audio input and output function */
 	WM8510Start(codecHandle);
 		
 	/* Configure codec for 8K operation	*/
@@ -353,78 +276,45 @@ void audioCodecInit()
 	/* Initialize G.726A Encoder and Decoder. */
 	G726AEncoderInit(encoder, G726A_16KBPS, G726A_FRAME_SIZE);
 	G726ADecoderInit(decoder, G726A_16KBPS, G726A_FRAME_SIZE);
-}
+} /* audioCodecInit() */
 
-void introPlayback()
-{
-	currentReadAddress += SFMRead(currentReadAddress, 
-		encodedSamples, G726A_FRAME_SIZE);
-	if(currentReadAddress >= SPEECH_SEGMENT_SIZE)
-	{
-		currentReadAddress = 0;
-	}
-
-	/* Decode the samples	*/
-	G726ADecode(decoder, encodedSamples, decodedSamples);
-	
-	for(i = 0; i < G726A_FRAME_SIZE; i ++)
-	{
-		/* Scale the decoded sample to 
-		 * adjust for the 16 to 14-bit scaling done before
-		 * encode */
-		decodedSamples[i] = decodedSamples[i] << 2;
-	}
-
-	/* Wait till the codec is available for a new  frame	*/
-	while(WM8510IsWriteBusy(codecHandle));	
-
-	/* Write the frame to the output	*/
-	WM8510Write (codecHandle, decodedSamples, G726A_FRAME_SIZE);
-}
-
-void recordMode()
-{
-	if(erasedBeforeRecord == 0)
-	{
-		/* Stop the Audio input and output since this is a blocking
-		 * operation. Also rewind record and playback pointers to
-		 * start of the user flash area. Erase the user side of 
-		 * SFM memory blocks. Also set the erasedBeforeRecord flag
-		 * so that this is done only once before record. Start the
-		 * codec when the erase is complete.
-		 * */				 
-		WM8510Stop(codecHandle);
-		currentWriteAddress = WRITE_START_ADDRESS;
-		userPlaybackAddress = WRITE_START_ADDRESS;
-		RED_LED = SASK_LED_ON;
-		YELLOW_LED = SASK_LED_OFF;
-	
-		for(address = WRITE_START_ADDRESS; 
-				address < SFM_LAST_ADDRESS;
-				address += 0x10000)
-		{
-			SFMBlockErase(address);
-			
-		}
-		RED_LED = SASK_LED_OFF;		
-		 
-		erasedBeforeRecord = 1;
-		WM8510Start(codecHandle);
-	}
-	else
-	{	
-		/* Record the encoded audio frame. Yellow LED turns on when
-		 * when recording is being performed. Store the encoded
-		 * buffer into SFM. If the last SFM address is reached then
-		 * stop recording and start playback.
+void switchCheck() {
+	/* The CheckSwitch functions are defined in sask.c	*/
+	if((CheckSwitchS1()) == TRUE) {
+		/* Toggle Record Mode.
+		 * Turn on Yellow LED and Green LED off.
 		 * */
-		
+		 
 		YELLOW_LED = SASK_LED_ON;
+		GREEN_LED = SASK_LED_OFF;
+		modeSelect = RECORD_MODE;							
+	}		
+	
+	if((CheckSwitchS2()) == TRUE) {
+		/* Toggle to Playback Mode.
+		 * Turn on Green LED and Yellow LED off.
+		 * */
+		 
+		GREEN_LED = SASK_LED_ON;
+		YELLOW_LED = SASK_LED_OFF;
+		modeSelect = PLAYBACK_MODE;						
+	}
+}
 
-		/*Obtain Audio Samples	*/
-		while(WM8510IsReadBusy(codecHandle));
+	/* Read new frame from codec and encode. */
+void recordMode() {
+				
+	/*Obtain Audio Samples
+	while(WM8510IsReadBusy(codecHandle));
+	*/
+	
+	/* Wait till the codec is ready with a new frame */	
+	if(WM8510IsReadBusy(codecHandle) == FALSE) {
+		
+		/* Obtain audio samples from codec */
 		WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);				
 
+		/* Scale samples from 16-bit to 14-bit */
 		for(i = 0; i < G726A_FRAME_SIZE; i ++)
 		{
 			// Not necessary if its known that input
@@ -432,59 +322,41 @@ void recordMode()
 			rawSamples[i] = rawSamples[i] >> 2;
 		}
 
+		/* Encode samples*/
 		G726AEncode(encoder,rawSamples,encodedSamples);
 		
 		/* Compresses 80 encoded samples into 20 bytes of data prior to transmission */
 		G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
-
-		/* Causes compile warning due to passing unsigned char* to char* argument */
-		currentWriteAddress += SFMWrite(currentWriteAddress,
-					packedData, PACKED_BYTES);
-	
-		if(currentWriteAddress >= SFM_LAST_ADDRESS)
-		{
-		
-			YELLOW_LED = SASK_LED_OFF;
-			erasedBeforeRecord = 0;
-			record = 0;
-			playback = 1;
-		}
 	}
-}
+}	/* End of recordMode() */
 
-void playbackMode()
-{
-	GREEN_LED = SASK_LED_ON;
-	erasedBeforeRecord = 0;		
-
-	/* Causes compile warning due to passing unsigned char* to char* argument */
-	userPlaybackAddress += SFMRead(userPlaybackAddress,
-					packedData, PACKED_BYTES);
-	
-	if(userPlaybackAddress >= currentWriteAddress)
-	{
-		userPlaybackAddress = WRITE_START_ADDRESS;
-	}
-
-	/* Uncompresses 20 bytes of received data in 80 encoded samples */
-	G726AUnpack(packedData, encodedSamples, G726A_FRAME_SIZE, G726A_16KBPS);
-
-	/* Decode the samplesn*/
-	G726ADecode(decoder, encodedSamples, decodedSamples);
-
-	for(i = 0; i < G726A_FRAME_SIZE; i ++)
-	{
-		/* Scale the decoded sample to 
-		 * adjust for the 16 to 14-bit scaling done before
-		 * encode */
-		decodedSamples[i] = decodedSamples[i] << 2;
-	}
-
-	/* Wait till the codec is available for a new  frame	*/
+	/* Write decoded frame to codec for playback. */
+void playbackMode() {
+	 
+	/* Wait till the codec is available for a new frame	
 	while(WM8510IsWriteBusy(codecHandle));	
+	*/
+	
+	/* Wait till the codec is available for a new frame */
+	if(WM8510IsWriteBusy(codecHandle) == FALSE) {
+	
+		/* Uncompress 20 bytes of received data into 80 encoded samples */
+		G726AUnpack(packedData, encodedSamples, G726A_FRAME_SIZE, G726A_16KBPS);
 
-	/* Write the frame to the output	*/
-	WM8510Write (codecHandle,decodedSamples,G726A_FRAME_SIZE);
-}
+		/* Decode the samples*/
+		G726ADecode(decoder, encodedSamples, decodedSamples);
 
-		
+		/* Scale sample*/
+		for(i = 0; i < G726A_FRAME_SIZE; i ++) 	{
+			/* Scale the decoded sample to 
+			 * adjust for the 16 to 14-bit scaling done before
+			 * encode */
+			decodedSamples[i] = decodedSamples[i] << 2;
+		}
+
+		/* Write the frame to the output	*/
+		WM8510Write (codecHandle,decodedSamples,G726A_FRAME_SIZE);
+	}
+}	/* End of playbackMode() */
+
+/* End of File */
