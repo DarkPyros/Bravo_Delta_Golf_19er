@@ -158,229 +158,236 @@
 *  END OF TERMS AND CONDITIONS
 ***************************************************************************/
 
-
-    #include <p33Fxxxx.h>
-	#include "..\h\Explorer16.h"
-	#include "..\h\WM8510CodecDrv.h"
-	#include "..\h\SST25VF040BDrv.h"
+#include "..\h\p33FJ256GP506.h"
+#include "..\h\WM8510CodecDrv.h"
+#include "..\h\sask.h"
 
 #include "..\h\G726A.h"
 #include "..\h\G726APack.h"
+#include "..\h\main.h"
+#include "..\h\SPIBus.h"
 
-	_FGS(GWRP_OFF & GCP_OFF);
-	_FOSCSEL(FNOSC_FRC);
-	_FOSC(FCKSM_CSECMD & OSCIOFNC_ON & POSCMD_XT);
-	_FWDT(FWDTEN_OFF);
+/* Disable clock write protection
+ * Select Primary osc w/ PLL
+ * Clock switch enabled, OSC2 Pin digital I/O, external clock (12 MHZ)
+ * Watchdog Time disabled
+ */
+_FGS(GWRP_OFF & GCP_OFF);
+_FOSCSEL(FNOSC_PRIPLL);
+_FOSC(FCKSM_CSECMD & OSCIOFNC_ON & POSCMD_EC);
+_FWDT(FWDTEN_OFF);
 
+/* PACKED_BYTES - The number of bytes contained in G726A
+ *                 packed data array					
+ */
+#define PACKED_BYTES 20
 
 /* Allocate state memory and IO buffers for G.726A encoder and decoder */
-int samples	[G726A_FRAME_SIZE]; 
-int decodedSamples [G726A_FRAME_SIZE];
+int rawSamples		[G726A_FRAME_SIZE]; 
+int decodedSamples	[G726A_FRAME_SIZE];
 unsigned char encodedSamples[G726A_FRAME_SIZE];
-unsigned char packedData[G726A_FRAME_SIZE];
+unsigned char packedData[PACKED_BYTES];
 unsigned char encoder[G726A_ENCODER_SIZE];
 unsigned char decoder[G726A_DECODER_SIZE];
 
-/* Allocate memory for buffers and drivers	*/
-	int codecBuffer [WM8510DRV_DRV_BUFFER_SIZE] ;
-	WM8510Handle codec;
-	WM8510Handle * codecHandle = &codec;
+/* Allocate memory for buffers and drivers
+ * codecBuffer - Buffer used by the codec driver
+ * flashMemoryBuffer - buffer used by the SFM driver
+ * */
+int 	codecBuffer		[WM8510DRV_DRV_BUFFER_SIZE];
 
-/* Allocate buffers for the Serial flash memory and instantiate a
- * handle to the driver state	*/
-	unsigned char flashMemoryBuffer[SST25VF040BDRV_BUFFER_SIZE];
-	SST25VF040BHandle flashMemoryHandle; 
-	SST25VF040BHandle *pFlashMemoryHandle = &flashMemoryHandle;
+WM8510Handle codec;
+WM8510Handle * codecHandle = &codec;
 
-int main(void)
-{
-    long currentWriteAddress;   /* This variable tracks the writes to flash	*/
-    long userPlaybackAddress;	/* This variable tracks user playback		*/
-    int record;					/* If set, indicates recording is in progress */
-    int playback;				/* If set, indicates playback is in progress */
-    int erasedBeforeRecord;		/* If set, indicates erase before record is complete */
-    int commandValue = 0;		/* This command value un-protects the flash */
-    int i;
-    int nPackedBytes;
+/* Flags
+ * modeSelect - indicates if radio is in transmit mode
+ * */			
+int modeSelect = IDLE;
 
-    /* Configure Oscillator to operate the device at 40MHz.
-     * Fosc= Fin*M/(N1*N2), Fcy=Fosc/2
-     * Fosc= 8.0M*40/(2*2)=80Mhz for 8.0M input clock */
-    PLLFBD=38;				/* M=40	*/
-    CLKDIVbits.PLLPOST=0;		/* N1=2	*/
-    CLKDIVbits.PLLPRE=0;		/* N2=2	*/
-    OSCTUN=0;			
-    __builtin_write_OSCCONH(0x03);		/*	Initiate Clock Switch to FRC with PLL*/
-    __builtin_write_OSCCONL(0x01);
-    while (OSCCONbits.COSC != 0b011);	/*	Wait for Clock switch to occur	*/
-    while(!OSCCONbits.LOCK);	
+/* Index values */
+unsigned char i;	
 
-    /* Initialize flags and address variables	*/
-    record 				= 0;
-    playback 			= 0;
-    currentWriteAddress	= 0;
-    userPlaybackAddress	= 0;
-    erasedBeforeRecord 	= 0;	
+/* Function Declarations */
+void audioCodecInit();
+void modeCheck();
+void recordMode();
+void playbackMode();
+void writeToSPI(unsigned char*, int);
+void readFromSPI(unsigned char*, int);
 
-    /* Initialise the flash driver. Enable status write and unprotect the device */
-    /* Refer to the device data sheet for more details	*/
-    SST25VF040BInit	(pFlashMemoryHandle,flashMemoryBuffer);	
-   	SST25VF040BStart(pFlashMemoryHandle);
-   	SST25VF040BIOCtl(pFlashMemoryHandle, SST25VF040BDRV_WRITE_STATUS_ENABLE,0);
-   	SST25VF040BIOCtl(pFlashMemoryHandle, SST25VF040BDRV_WRITE_STATUS,(void *)&commandValue);
 
-    /* Intialize the G.726A Encoder and Decoder.*/ 
-    G726AEncoderInit(encoder,G726A_40KBPS, G726A_FRAME_SIZE);
-    G726ADecoderInit(decoder,G726A_40KBPS, G726A_FRAME_SIZE);
+int main(void) {
+	
+	audioCodecInit();
+	SPISlaveInit();
+	
+	/* Main processing loop. */
+	while(1) {
 
-    /* Intialize the codec driver state, start it
-     * and configure the codec for 8KHz sample rate */
-	Explorer16Init();
-	WM8510Init(codecHandle, codecBuffer);
+		modeCheck();
+
+		/* If record mode is enabled, encode the samples using G726. */
+		if(modeSelect == RECORD_MODE){
+			recordMode();
+		}	/* End of record branch */
+		
+		/* If playback is enabled, decoded the samples and output to codec. */		 
+		if(modeSelect == PLAYBACK_MODE) {
+			playbackMode();
+		}
+	}	/* End of main processing loop */
+}	/* End of main() */
+
+/* Function definitions */
+	/* Initialization of audio controller*/
+void audioCodecInit() {
+	/* Configure Oscillator to operate the device at 80MHz / 40 MIPS.
+	 * Fosc= Fin*M/(N1*N2), Fcy=Fosc/2
+	 * Fosc= 12*40/(3*2)=80Mhz for 12MHz input clock */ 
+	PLLFBD=38;				/* M = PLLFBD + 2 = 40	*/
+	CLKDIVbits.PLLPRE=1;	/* N1 = PLLPRE + 2 = 3	*/
+	CLKDIVbits.PLLPOST=0;	/* N2 = PLLPOST + 2 = 2	*/
+	OSCTUN=0;			
+	
+	__builtin_write_OSCCONH(0x01);		/*	Initiate Clock Switch to FRC with PLL*/
+	__builtin_write_OSCCONL(0x01);
+	while (OSCCONbits.COSC != 0b01);	/*	Wait for Clock switch to occur	*/
+	while(!OSCCONbits.LOCK);
+
+	/* Initialize PortB pins as inputs for mode selection */
+	PLAYBACK_TRIS  = 1;
+	RECORD_TRIS = 1;
+	
+	/* Initialize the board and the drivers	*/
+	SASKInit();
+	WM8510Init(codecHandle,codecBuffer);
+	
+	/* Start Audio input and output function */
 	WM8510Start(codecHandle);
+		
+	/* Configure codec for 8K operation	*/
 	WM8510SampleRate8KConfig(codecHandle);
 
-    /* Main processing loop. Executed for every input and 
-     * output frame. 
-     * 1. Capture speech and encode
-     * 2. Erase and record if record = 1
-     * 3. Playback if playback = 1
-     * 4. Check switch S3 and set record if activated
-     * 5. Check switch S4 and set playback if activated
-     * 6. Goto 1	*/
-    while(1)
-    {
+	/* Initialize G.726A Encoder and Decoder. */
+	G726AEncoderInit(encoder, G726A_16KBPS, G726A_FRAME_SIZE);
+	G726ADecoderInit(decoder, G726A_16KBPS, G726A_FRAME_SIZE);
+} /* audioCodecInit() */
 
-/* LED3 - This indicates that the application is running
- * LED4 - This indicates that the flash is being erased
- * LED7 - This indicates that application is recording
- * LED8 - This indicates that application is playing back */
-		LED3 = EXPLORER16_LED_ON;
+void modeCheck() {
+	
+	if(PLAYBACK_FLAG == TRUE) {
+		/* Toggle to Playback Mode.
+		 * Turn on Green LED and Yellow LED off.
+		 * */		 
+		YELLOW_LED = SASK_LED_OFF;
+		GREEN_LED = SASK_LED_ON;
+		modeSelect = PLAYBACK_MODE;						
+	}	
+	
+	else if(RECORD_FLAG == TRUE) {
+		/* Toggle Record Mode.
+		 * Turn on Yellow LED and Green LED off.
+		 * */		 
+		YELLOW_LED = SASK_LED_ON;
+		GREEN_LED = SASK_LED_OFF;
+		modeSelect = RECORD_MODE;							
+	}
+	
+	else {
+		/* If not in Playback or Record mode, default to Idle mode. */
+		YELLOW_LED = SASK_LED_OFF;
+		GREEN_LED = SASK_LED_OFF;
+		modeSelect = PLAYBACK_MODE;
+	}
+}
 
-        /* Obtaing the audio samples	*/
-        while(WM8510IsReadBusy(codecHandle));
-        WM8510Read(codecHandle,samples,G726A_FRAME_SIZE);
+	/* Read new frame from codec and encode. */
+void recordMode() {
+				
+	/*Obtain Audio Samples
+	while(WM8510IsReadBusy(codecHandle));
+	*/
+	
+	/* Wait till the codec is ready with a new frame */	
+	if(WM8510IsReadBusy(codecHandle) == FALSE) {
+		
+		/* Obtain audio samples from codec */
+		WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);				
 
-        for(i = 0; i < G726A_FRAME_SIZE; i++)
-        {
-            /* Adjust the input so that it
-             * is 14 bit */
-            samples[i] = samples[i] >> 2;
-        }
+		/* Scale samples from 16-bit to 14-bit */
+		for(i = 0; i < G726A_FRAME_SIZE; i ++)
+		{
+			// Not necessary if its known that input
+			// is 14 bits or less.			
+			rawSamples[i] = rawSamples[i] >> 2;
+		}
 
-        /* Encode the voice data */
-        G726AEncode(encoder,samples,encodedSamples);
-        
-        /* Pack the encoded samples */
-        nPackedBytes = G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_40KBPS);		
+		/* Encode samples*/
+		G726AEncode(encoder,rawSamples,encodedSamples);
+		
+		/* Compresses 80 encoded samples into 20 bytes of data prior to transmission */
+		G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
+		
+		/* Transmit data of packedData array over SPI */
+		writeToSPI(packedData, PACKED_BYTES);
+	}
+}	/* End of recordMode() */
 
-        /* If record is enabled, encode the samples using G.726A  
-         * Store in flash. Erase flash before recording starts	*/
-        if(record == 1)
-        {				
-            if(erasedBeforeRecord == 0)
-            {
-                /* Stop the Audio input and output since this is a blocking
-                 * operation. Also rewind record and playback pointers to
-                 * start of the user flash area.*/
-                LED4 = EXPLORER16_LED_ON;
-                WM8510Stop(codecHandle);
+	/* Write decoded frame to codec for playback. */
+void playbackMode() {
+	 
+	/* Wait till the codec is available for a new frame	
+	while(WM8510IsWriteBusy(codecHandle));	
+	*/
+	
+	/* Wait till the codec is available for a new frame */
+	if(WM8510IsWriteBusy(codecHandle) == FALSE) {
+	
+		/* Receive data from SPI and write to packedData array */
+		readFromSPI(packedData, PACKED_BYTES);
+		
+		/* Uncompress 20 bytes of received data into 80 encoded samples */
+		G726AUnpack(packedData, encodedSamples, G726A_FRAME_SIZE, G726A_16KBPS);
 
-				/* Reset addresses */
-                currentWriteAddress = 0;
-                userPlaybackAddress = 0;
+		/* Decode the samples*/
+		G726ADecode(decoder, encodedSamples, decodedSamples);
 
-                /* Erase the  flash. */
-                SST25VF040BIOCtl(pFlashMemoryHandle, SST25VF040BDRV_WRITE_ENABLE,0);
-                SST25VF040BIOCtl(pFlashMemoryHandle, SST25VF040BDRV_CHIP_ERASE,0);
+		/* Scale sample*/
+		for(i = 0; i < G726A_FRAME_SIZE; i ++) 	{
+			/* Scale the decoded sample to 
+			 * adjust for the 16 to 14-bit scaling done before
+			 * encode */
+			decodedSamples[i] = decodedSamples[i] << 2;
+		}
 
-                /* Since erase is complete, the next time the loop is executed
-                 * do not erase the flash. Start the audio input and output	*/
-                erasedBeforeRecord = 1;
+		/* Write the frame to the output	*/
+		WM8510Write (codecHandle,decodedSamples,G726A_FRAME_SIZE);
+	}
+}	/* End of playbackMode() */
 
-                WM8510Start(codecHandle);
-                LED4 = EXPLORER16_LED_OFF;
-            }
-            else
-            {	
-                /* Record the encoded audio frame. */
+	/* Transmit an array of data using SPI */
+void writeToSPI(unsigned char* data, int size) {
+	unsigned char currentByte = 0;
+	
+	while(currentByte < size) {
+		while(!SPI1STATbits.SPITBF);
+		
+		SPI1BUF = data[currentByte];
+		
+		currentByte++;
+	}
+}	/* End of writeToSPI() */
 
-				/* LED7 turns on when when recording is being performed	*/
-                LED7 = EXPLORER16_LED_ON;
-                while( SST25VF040BIsBusy(pFlashMemoryHandle));
-                SST25VF040BIOCtl(pFlashMemoryHandle, SST25VF040BDRV_WRITE_ENABLE,0);
-                SST25VF040BWrite(pFlashMemoryHandle, currentWriteAddress, packedData, nPackedBytes);
-                currentWriteAddress += nPackedBytes;
-                if(currentWriteAddress >= SST25VF040BDRV_LAST_ADDRESS)
-                {
-                    /* If flash is full then stop recording and start playing back	*/
-                    LED7 = EXPLORER16_LED_OFF;
-                    LED8 = EXPLORER16_LED_ON;
-                    record = 0;
-                    playback = 1;
-                    erasedBeforeRecord = 0;
-                }
-            }
-        } /* End of Frame Record */
+void readFromSPI(unsigned char* data, int size) {
+	unsigned char currentByte = 0;
+	
+	while(currentByte < size) {
+		while(!SPI1STATbits.SPIRBF);
+		
+		data[currentByte] = SPI1BUF;
+		
+		currentByte++;
+	}
+}	/* End of readFromSPI() */
 
-        if(playback == 1)
-        {
-            /* If playback is enabled, then start playing back samples from 
-             * address 0. Playback only till the last record address and then 
-             * rewind to the start	*/
-            while( SST25VF040BIsBusy(pFlashMemoryHandle));				
-            SST25VF040BRead(pFlashMemoryHandle,userPlaybackAddress,packedData,nPackedBytes);
-            while( SST25VF040BIsBusy(pFlashMemoryHandle));
-
-            userPlaybackAddress += nPackedBytes;
-            if(userPlaybackAddress >= currentWriteAddress)
-            {
-                /* Cannot playback more than what is recorded, so rewind pointer */
-                userPlaybackAddress = 0;
-            }
-        } /* End of Frame Playback */
-        
-        /* Unpack the data */
-        G726AUnpack(packedData, encodedSamples, G726A_FRAME_SIZE, G726A_40KBPS);
-
-        /* Decode the samples	*/
-        G726ADecode(decoder, encodedSamples, decodedSamples);
-
-        for(i = 0; i < G726A_FRAME_SIZE; i ++)
-        {
-            /* Re-adjust the decoded sample to 
-             * adjust for the scaling done before
-             * encode */
-            decodedSamples[i] = decodedSamples[i] << 2;
-        }
-
-        /* Wait till the codec is available for a new  frame	
-         * and then write to the codec */
-        while(WM8510IsWriteBusy(codecHandle));	
-        WM8510Write (codecHandle,decodedSamples,G726A_FRAME_SIZE);
-
-        /* The CheckSwitch functions are defined in Explorer16.c	*/			
-        if((CheckSwitchS3()) == 1)
-        {
-            /* Set the record flag, clear the playback  flag
-             * switch off LED6, switch on LED5 */
-
-            playback  = 0;
-            record = 1;
-			LED7 = EXPLORER16_LED_ON;
-            LED8 = EXPLORER16_LED_OFF;
-        }
-        if((CheckSwitchS6()) == 1)
-        {
-            /* Set the playback flag, clear the recording flag
-             * switch off LED5, switch on LED6, clear the erasedBeforeRecord
-             * flag to erase the flash the next time record is pressed */
-
-            playback  = 1;
-            record = 0;
-            erasedBeforeRecord = 0;
-            LED7 = EXPLORER16_LED_OFF;
-            LED8 = EXPLORER16_LED_ON;
-        }		
-    } /* End of while loop */
-} /* End of main */
+/* End of File */
