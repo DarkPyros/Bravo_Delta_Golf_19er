@@ -1,7 +1,7 @@
 #ifndef _WM8510CODECDRV_H_
 #define  _WM8510CODECDRV_H_
 
-#include "..\h\p33FJ256GP506.h"
+#include "..\h\includes.h"
 
 #define WM8510DRV_DCI_MASTER 				1
 #define WM8510DRV_CODEC_FRAME 				80

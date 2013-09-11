@@ -8,16 +8,11 @@
 #define RECORD_MODE 1
 #define IDLE 2
 
-/* I/O pins for reading mode signal */
-#define PLAYBACK_TRIS	_TRISB6
-#define RECORD_TRIS		_TRISB7
-
-#define PLAYBACK_FLAG	_RB6
-#define RECORD_FLAG		_RB7
+extern int tickCount;
 
 /* Flags
- * modeSelect - indicates if radio is in transmit mode
+ * modeSelectFlag - indicates if radio is in transmit mode
  * */
-extern int modeSelect;
+extern int modeSelectFlag;
 
 #endif

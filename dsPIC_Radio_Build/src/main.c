@@ -158,14 +158,7 @@
 *  END OF TERMS AND CONDITIONS
 ***************************************************************************/
 
-#include "..\h\p33FJ256GP506.h"
-#include "..\h\WM8510CodecDrv.h"
-#include "..\h\sask.h"
-
-#include "..\h\G726A.h"
-#include "..\h\G726APack.h"
-#include "..\h\main.h"
-#include "..\h\SPIBus.h"
+#include "..\h\includes.h"
 
 /* Disable clock write protection
  * Select Primary osc w/ PLL
@@ -200,9 +193,11 @@ WM8510Handle codec;
 WM8510Handle * codecHandle = &codec;
 
 /* Flags
- * modeSelect - indicates if radio is in transmit mode
+ * modeSelectFlag - indicates if radio is in transmit mode
  * */			
-int modeSelect = IDLE;
+int modeSelectFlag = IDLE;
+
+int tickCount;
 
 /* Index values */
 unsigned char i;	
@@ -210,6 +205,7 @@ unsigned char i;
 /* Function Declarations */
 void audioCodecInit();
 void modeCheck();
+void selectCodecMode();
 void recordMode();
 void playbackMode();
 void writeToSPI(unsigned char*, int);
@@ -224,17 +220,7 @@ int main(void) {
 	/* Main processing loop. */
 	while(1) {
 
-		modeCheck();
-
-		/* If record mode is enabled, encode the samples using G726. */
-		if(modeSelect == RECORD_MODE){
-			recordMode();
-		}	/* End of record branch */
 		
-		/* If playback is enabled, decoded the samples and output to codec. */		 
-		if(modeSelect == PLAYBACK_MODE) {
-			playbackMode();
-		}
 	}	/* End of main processing loop */
 }	/* End of main() */
 
@@ -262,6 +248,8 @@ void audioCodecInit() {
 	SASKInit();
 	WM8510Init(codecHandle,codecBuffer);
 	
+	tickCount = 0;
+	
 	/* Start Audio input and output function */
 	WM8510Start(codecHandle);
 		
@@ -281,7 +269,7 @@ void modeCheck() {
 		 * */		 
 		YELLOW_LED = SASK_LED_OFF;
 		GREEN_LED = SASK_LED_ON;
-		modeSelect = PLAYBACK_MODE;						
+		modeSelectFlag = PLAYBACK_MODE;						
 	}	
 	
 	else if(RECORD_FLAG == TRUE) {
@@ -290,14 +278,25 @@ void modeCheck() {
 		 * */		 
 		YELLOW_LED = SASK_LED_ON;
 		GREEN_LED = SASK_LED_OFF;
-		modeSelect = RECORD_MODE;							
+		modeSelectFlag = RECORD_MODE;							
 	}
 	
 	else {
 		/* If not in Playback or Record mode, default to Idle mode. */
 		YELLOW_LED = SASK_LED_OFF;
 		GREEN_LED = SASK_LED_OFF;
-		modeSelect = PLAYBACK_MODE;
+		modeSelectFlag = PLAYBACK_MODE;
+	}
+}
+
+	/* Select the audio processing mode to run*/
+void selectCodecMode() {
+	if(modeSelectFlag == PLAYBACK_MODE) {
+		playbackMode();
+	}
+	
+	else if(modeSelectFlag == RECORD_MODE) {
+		recordMode();
 	}
 }
 
@@ -328,9 +327,7 @@ void recordMode() {
 		/* Compresses 80 encoded samples into 20 bytes of data prior to transmission */
 		G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
 		
-		/* Transmit data of packedData array over SPI */
-		writeToSPI(packedData, PACKED_BYTES);
-	}
+	/* } */
 }	/* End of recordMode() */
 
 	/* Write decoded frame to codec for playback. */
@@ -343,9 +340,6 @@ void playbackMode() {
 	/* Wait till the codec is available for a new frame */
 	if(WM8510IsWriteBusy(codecHandle) == FALSE) {
 	
-		/* Receive data from SPI and write to packedData array */
-		readFromSPI(packedData, PACKED_BYTES);
-		
 		/* Uncompress 20 bytes of received data into 80 encoded samples */
 		G726AUnpack(packedData, encodedSamples, G726A_FRAME_SIZE, G726A_16KBPS);
 
@@ -365,6 +359,18 @@ void playbackMode() {
 	}
 }	/* End of playbackMode() */
 
+	/* Select if writing or reading from SPI */
+void selectSPIMode() {
+	if(modeSelectFlag == PLAYBACK_MODE) {
+		/* Receive data from SPI and write to packedData array */
+		readFromSPI(packedData, PACKED_BYTES);		
+	}
+	
+	else if(modeSelectFlag == RECORD_MODE) {
+		/* Transmit data of packedData array over SPI */
+		writeToSPI(packedData, PACKED_BYTES);
+	}	
+}
 	/* Transmit an array of data using SPI */
 void writeToSPI(unsigned char* data, int size) {
 	unsigned char currentByte = 0;
@@ -389,5 +395,87 @@ void readFromSPI(unsigned char* data, int size) {
 		currentByte++;
 	}
 }	/* End of readFromSPI() */
+
+void codecSampling {
+	
+	_DCIIF = 0;;
+	
+	/* At the start of frame time, check current mode of radio */
+	if(tickCount == 0) {
+		if(PLAYBACK_FLAG == TRUE) {
+			modeSelectFlag = PLAYBACK_MODE;						
+		}	
+		else if(RECORD_FLAG == TRUE) {
+			modeSelectFlag = RECORD_MODE;							
+		}	
+		else {
+			modeSelectFlag = IDLE_MODE;
+		}
+	}
+	
+	/* Send or Receive Samples */
+	if(modeSelectFlag == RECORD_MODE) {
+		thisWM8510Codec->activeInputBuffer[thisWM8510Codec->currentSampleIndex] = RXBUF0;
+		thisWM8510Codec->currentSampleIndex++;
+		
+		if(thisWM8510Codec->currentSampleIndex == thisWM8510Codec->currentFrameSize)
+		{
+			/* dsPIC received one frame of data from codec.
+			 * Toggle the buffer indicator bit */
+		
+			thisWM8510Codec->statusFlag ^= WM8510DRV_TGL_BUFFER_IND;
+			if((thisWM8510Codec->statusFlag &	WM8510DRV_GET_BUFFER_IND) != 0)
+			{
+				/* Buffer indicator is 1 means use buffer2	*/
+				thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer2;
+			}
+			else
+			{
+				/* Buffer indicator is 0 means use buffer1	*/
+				thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer1;
+			}
+			/* Reset the sample index and update the sample count	*/
+			thisWM8510Codec->currentSampleIndex = 0;		
+			thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
+			thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
+		}
+	}
+	
+	else if(modeSelectFlag == PLAYBACK_MODE) {
+		TXBUF0 = thisWM8510Codec->activeOutputBuffer[thisWM8510Codec->currentSampleIndex];
+		thisWM8510Codec->currentSampleIndex++;
+	
+		if(thisWM8510Codec->currentSampleIndex == thisWM8510Codec->currentFrameSize)
+		{
+			/* dsPIC transmitted one frame of data to codec.
+			 * Toggle the buffer indicator bit */
+		
+			thisWM8510Codec->statusFlag ^= WM8510DRV_TGL_BUFFER_IND;
+			if((thisWM8510Codec->statusFlag &	WM8510DRV_GET_BUFFER_IND) != 0)
+			{
+				/* Buffer indicator is 1 means use buffer2	*/
+				thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer2;
+			}
+			else
+			{
+				/* Buffer indicator is 0 means use buffer1	*/
+				thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer1;
+			}
+			/* Reset the sample index and update the sample count	*/
+			thisWM8510Codec->currentSampleIndex = 0;		
+			thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
+			thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
+			thisWM8510Codec->statusFlag &= WM8510DRV_CLR_WRITE_BUSY;
+		}
+	}
+
+	/* Increment the frame time counter*/
+	if(tickCount >= G726A_FRAME_SIZE) {
+		tickCount = 0;
+	}
+	else {
+		tickCount++;
+	}
+}
 
 /* End of File */
