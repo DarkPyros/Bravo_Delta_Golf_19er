@@ -156,6 +156,67 @@ void WM8510Write(WM8510Handle * pHandle, int * data, int size)
 	pHandle->statusFlag |= WM8510DRV_SET_WRITE_BUSY;
 	__asm__ volatile("disi #0x0"); /* enable interrupts */
 }
+
+void WM8510CodecSampling() {
+	
+	_DCIIF = 0;
+		
+	/* Send or Receive Samples */
+	if(modeSelectFlag == RECORD_MODE) {
+		thisWM8510Codec->activeInputBuffer[thisWM8510Codec->currentSampleIndex] = RXBUF0;
+		thisWM8510Codec->currentSampleIndex++;
+		
+		if(thisWM8510Codec->currentSampleIndex == thisWM8510Codec->currentFrameSize)
+		{
+			/* dsPIC received one frame of data from codec.
+			 * Toggle the buffer indicator bit */
+		
+			thisWM8510Codec->statusFlag ^= WM8510DRV_TGL_BUFFER_IND;
+			if((thisWM8510Codec->statusFlag &	WM8510DRV_GET_BUFFER_IND) != 0)
+			{
+				/* Buffer indicator is 1 means use buffer2	*/
+				thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer2;
+			}
+			else
+			{
+				/* Buffer indicator is 0 means use buffer1	*/
+				thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer1;
+			}
+			/* Reset the sample index and update the sample count	*/
+			thisWM8510Codec->currentSampleIndex = 0;		
+			thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
+			thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
+		}
+	}
+	
+	else if(modeSelectFlag == PLAYBACK_MODE) {
+		TXBUF0 = thisWM8510Codec->activeOutputBuffer[thisWM8510Codec->currentSampleIndex];
+		thisWM8510Codec->currentSampleIndex++;
+	
+		if(thisWM8510Codec->currentSampleIndex == thisWM8510Codec->currentFrameSize)
+		{
+			/* dsPIC transmitted one frame of data to codec.
+			 * Toggle the buffer indicator bit */
+		
+			thisWM8510Codec->statusFlag ^= WM8510DRV_TGL_BUFFER_IND;
+			if((thisWM8510Codec->statusFlag &	WM8510DRV_GET_BUFFER_IND) != 0)
+			{
+				/* Buffer indicator is 1 means use buffer2	*/
+				thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer2;
+			}
+			else
+			{
+				/* Buffer indicator is 0 means use buffer1	*/
+				thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer1;
+			}
+			/* Reset the sample index and update the sample count	*/
+			thisWM8510Codec->currentSampleIndex = 0;		
+			thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
+			thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
+			thisWM8510Codec->statusFlag &= WM8510DRV_CLR_WRITE_BUSY;
+		}
+	}
+}
 	
 int WM8510IOCtl(WM8510Handle * pHandle,int command, void * value)
 {

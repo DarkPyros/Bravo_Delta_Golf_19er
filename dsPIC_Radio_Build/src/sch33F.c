@@ -1,17 +1,29 @@
 #include "../h/includes.h"
 
-extern sTask SCH_tasks[SCH_MAX_TASKS];
+sTask SCH_tasks[SCH_MAX_TASKS];
+
+int tickCount = 0;
 
 void SCH_initExtTrigger(){
 	
-	/* Configure Change Notification pin 7 */
-	CNEN1bits.CN7IE = 1; // Enable CN7 pin for interrupt detection
-	IEC1bits.CNIE = 1; // Enable CN interrupts
-	IFS1bits.CNIF = 0; // Reset CN interrupt	
+	/* Initialize PortB pin as output for synchronization clock pulse */
+	SYNC_CLK_PULSE_TRIS	= 0;
+	SYNC_CLK_PULSE_PIN	= 0;		
 }
 
 void SCH_update() {
 	
+	/* Send synchronization clock pulse to other micro-controller*/
+	SYNC_CLK_PULSE_PIN ^= 1;
+	
+	/* Increment the frame time counter*/
+	if(tickCount == SCH_MAX_TICKS) {
+		tickCount = 0;
+	}
+	else {
+		tickCount++;
+	}
+
 	int i;
 	
 	for(i=0; i < SCH_MAX_TASKS; i++){
@@ -19,7 +31,7 @@ void SCH_update() {
 			/* If ExecitionTick == 255, the task is pre-emptive 
 			 * and run immediately. */
 			if(SCH_tasks[i].ExecutionTick == 255) {
-				(*SCH_task[i].pFunction)();
+				(*(SCH_task[i]).pFunction)();
 			}
 			
 			else if(SCH_tasks[i].ExecutionTick == tickCount) {
@@ -41,7 +53,10 @@ void SCH_dispatchTasks() {
 	}
 }
 
-int SCH_addTask(void (code* pFunction)(), const int tick){
+/* tick = the sample tick during a frame the task 
+ * will execute. Value between 1 to SCH_MAX_TICKS
+ */ 
+int SCH_addTask(void (*pFunction)(), const int tick){
 	int i = 0;
 	
 	while( (SCH_tasks[i].pTask != 0) && (i < SCH_MAX_TASKS) ){
@@ -52,13 +67,17 @@ int SCH_addTask(void (code* pFunction)(), const int tick){
 		return SCH_MAX_TASKS;
 	}
 	
-	SCH_tasks[i].pTask = pFunction;
-	SCH_tasks[i].ExecutionTick = tick;
-	SCH_tasks[i].RunMe = 0;
+	if( (tick >= 1) && (tick <= SCH_MAX_TICKS) ) {
+		SCH_tasks[i].pTask = pFunction;
+		SCH_tasks[i].ExecutionTick = tick;
+		SCH_tasks[i].RunMe = 0;
+	}	
 	
 	/* Return array position of task */
 	return i;
 }
 
-unsigned char SCH_deleteTask(const int);
+unsigned char SCH_deleteTask(const int) {
+
+}
 /* End of File */

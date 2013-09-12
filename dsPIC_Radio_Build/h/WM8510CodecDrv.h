@@ -99,9 +99,11 @@ void 	WM8510Start		(WM8510Handle * pHandle);
 void 	WM8510Stop		(WM8510Handle * pHandle);
 void 	WM8510Read		(WM8510Handle * pHandle, int * source, int size);
 void 	WM8510Write		(WM8510Handle * pHandle, int * dest, int size);
-int 		WM8510IOCtl		(WM8510Handle * pHandle,int command, void * value);
-int 		WM8510IsReadBusy(WM8510Handle * pHandle);
+int 	WM8510IOCtl		(WM8510Handle * pHandle,int command, void * value);
+int 	WM8510IsReadBusy(WM8510Handle * pHandle);
 int		WM8510IsWriteBusy(WM8510Handle * pHandle);
+
+void 	WM8510CodecSampling(void);
 
 /* These are helper functions. Use if you need to	*/
 

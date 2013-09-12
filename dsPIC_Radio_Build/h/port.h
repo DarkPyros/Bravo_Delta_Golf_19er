@@ -8,3 +8,8 @@
 #define PLAYBACK_FLAG	_RB6
 #define RECORD_FLAG		_RB7
 
+/* Output pin for synchronization timer */
+#define SYNC_CLK_PULSE_TRIS		_TRISB5
+#define SYNC_CLK_PULSE_PIN		_LATB5
+
+#endif

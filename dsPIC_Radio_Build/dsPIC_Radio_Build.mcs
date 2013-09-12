@@ -1,3 +1,70 @@
 [Header]
 MagicCookie={0b13fe8c-dfe0-40eb-8900-6712719559a7}
 Version=1.0
+[File000]
+Location=C:\Users\Greg\Documents\GitHub\Bravo_Delta_Golf_19er\dsPIC_Radio_Build\main.o
+Folder=Intermediary
+DeviceName=dsPIC33FJ256GP506
+LanguageToolSuiteID={479DDE59-4D56-455E-855E-FFF59A3DB57E}
+LanguageToolID={069BD372-6CA0-40D4-BF2F-5DC806D05083}
+LanguageToolLocation=C:\Microchip Starter Kits\dsPIC Starter Kit - 1\MPLAB C30\bin\pic30-gcc.exe
+PPAD=$(BINDIR)||$(TMPDIR)||$(AINDIR)||$(INCDIR)||$(LIBDIR)|C:\Microchip Starter Kits\dsPIC Starter Kit - 1\MPLAB C30\lib||$(LKRDIR)||
+SOLK=<src>|src\main.c|src\sask.c|src\WM8510CodecDrv.c|src\G726APack.c|src\SPIBus.c|src\sch33F.c||<obj>||<lib>|src\libG726A_16_33FJ_506.a||<lkr>||
+SuiteArgsString=
+ToolArgsString=-g -Wall -mlarge-data
+TraceCmdString=
+DebugOptions=-D__DEBUG -D__MPLAB_DEBUGGER_SKDE=1
+[File001]
+Location=C:\Users\Greg\Documents\GitHub\Bravo_Delta_Golf_19er\dsPIC_Radio_Build\sask.o
+Folder=Intermediary
+DeviceName=dsPIC33FJ256GP506
+LanguageToolSuiteID={479DDE59-4D56-455E-855E-FFF59A3DB57E}
+LanguageToolID={069BD372-6CA0-40D4-BF2F-5DC806D05083}
+LanguageToolLocation=C:\Microchip Starter Kits\dsPIC Starter Kit - 1\MPLAB C30\bin\pic30-gcc.exe
+PPAD=$(BINDIR)||$(TMPDIR)||$(AINDIR)||$(INCDIR)||$(LIBDIR)|C:\Microchip Starter Kits\dsPIC Starter Kit - 1\MPLAB C30\lib||$(LKRDIR)||
+SOLK=<src>|src\main.c|src\sask.c|src\WM8510CodecDrv.c|src\G726APack.c|src\SPIBus.c|src\sch33F.c||<obj>||<lib>|src\libG726A_16_33FJ_506.a||<lkr>||
+SuiteArgsString=
+ToolArgsString=-g -Wall -mlarge-data
+TraceCmdString=
+DebugOptions=-D__DEBUG -D__MPLAB_DEBUGGER_SKDE=1
+[File002]
+Location=C:\Users\Greg\Documents\GitHub\Bravo_Delta_Golf_19er\dsPIC_Radio_Build\WM8510CodecDrv.o
+Folder=Intermediary
+DeviceName=dsPIC33FJ256GP506
+LanguageToolSuiteID={479DDE59-4D56-455E-855E-FFF59A3DB57E}
+LanguageToolID={069BD372-6CA0-40D4-BF2F-5DC806D05083}
+LanguageToolLocation=C:\Microchip Starter Kits\dsPIC Starter Kit - 1\MPLAB C30\bin\pic30-gcc.exe
+PPAD=$(BINDIR)||$(TMPDIR)||$(AINDIR)||$(INCDIR)||$(LIBDIR)|C:\Microchip Starter Kits\dsPIC Starter Kit - 1\MPLAB C30\lib||$(LKRDIR)||
+SOLK=<src>|src\main.c|src\sask.c|src\WM8510CodecDrv.c|src\G726APack.c|src\SPIBus.c|src\sch33F.c||<obj>||<lib>|src\libG726A_16_33FJ_506.a||<lkr>||
+SuiteArgsString=
+ToolArgsString=-g -Wall -mlarge-data
+TraceCmdString=
+DebugOptions=-D__DEBUG -D__MPLAB_DEBUGGER_SKDE=1
+[File003]
+Location=C:\Users\Greg\Documents\GitHub\Bravo_Delta_Golf_19er\dsPIC_Radio_Build\G726APack.o
+Folder=Intermediary
+DeviceName=dsPIC33FJ256GP506
+LanguageToolSuiteID={479DDE59-4D56-455E-855E-FFF59A3DB57E}
+LanguageToolID={069BD372-6CA0-40D4-BF2F-5DC806D05083}
+LanguageToolLocation=C:\Microchip Starter Kits\dsPIC Starter Kit - 1\MPLAB C30\bin\pic30-gcc.exe
+PPAD=$(BINDIR)||$(TMPDIR)||$(AINDIR)||$(INCDIR)||$(LIBDIR)|C:\Microchip Starter Kits\dsPIC Starter Kit - 1\MPLAB C30\lib||$(LKRDIR)||
+SOLK=<src>|src\main.c|src\sask.c|src\WM8510CodecDrv.c|src\G726APack.c|src\SPIBus.c|src\sch33F.c||<obj>||<lib>|src\libG726A_16_33FJ_506.a||<lkr>||
+SuiteArgsString=
+ToolArgsString=-g -Wall -mlarge-data
+TraceCmdString=
+DebugOptions=-D__DEBUG -D__MPLAB_DEBUGGER_SKDE=1
+[File004]
+Location=C:\Users\Greg\Documents\GitHub\Bravo_Delta_Golf_19er\dsPIC_Radio_Build\SPIBus.o
+Folder=Intermediary
+DeviceName=dsPIC33FJ256GP506
+LanguageToolSuiteID={479DDE59-4D56-455E-855E-FFF59A3DB57E}
+LanguageToolID={069BD372-6CA0-40D4-BF2F-5DC806D05083}
+LanguageToolLocation=C:\Microchip Starter Kits\dsPIC Starter Kit - 1\MPLAB C30\bin\pic30-gcc.exe
+PPAD=$(BINDIR)||$(TMPDIR)||$(AINDIR)||$(INCDIR)||$(LIBDIR)|C:\Microchip Starter Kits\dsPIC Starter Kit - 1\MPLAB C30\lib||$(LKRDIR)||
+SOLK=<src>|src\main.c|src\sask.c|src\WM8510CodecDrv.c|src\G726APack.c|src\SPIBus.c|src\sch33F.c||<obj>||<lib>|src\libG726A_16_33FJ_506.a||<lkr>||
+SuiteArgsString=
+ToolArgsString=-g -Wall -mlarge-data
+TraceCmdString=
+DebugOptions=-D__DEBUG -D__MPLAB_DEBUGGER_SKDE=1
+[TOOL_LOC_STAMPS]
+tool_loc{069BD372-6CA0-40D4-BF2F-5DC806D05083}=C:\Microchip Starter Kits\dsPIC Starter Kit - 1\MPLAB C30\bin\pic30-gcc.exe
