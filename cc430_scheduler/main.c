@@ -101,10 +101,10 @@ void Clock_Init(void)
   __bis_SR_register(SCG0);                  // Disable the FLL control loop
   UCSCTL0 = 0x0000;                         // Set lowest possible DCOx, MODx
   UCSCTL1 = DCORSEL_7;                      // Select DCO range 20MHz operation
-  UCSCTL2 = FLLD_1 + 2;                     // Set DCO Multiplier for 20MHz
+  UCSCTL2 = FLLD_0 + 2;                     // Set DCO Multiplier for 20MHz
                                             // ((N + 1) * FLLRef) / FLLDiv = Fdco
-                                            // ((2 + 1) * 6.5 MHz) / 2 = 19.5MHz
-                                            // Set FLL Div = fDCOCLK/2
+                                            // ((2 + 1) * 6.5 MHz) / 1 = 19.5MHz
+                                            // Set FLL Div = fDCOCLK/1
   __bic_SR_register(SCG0);                  // Enable the FLL control loop
 
   // Worst-case settling time for the DCO when the DCO range bits have been
