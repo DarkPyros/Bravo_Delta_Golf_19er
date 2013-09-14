@@ -9,6 +9,7 @@ void Timer_A0_Init (void);
 void Timer_Tick_Init(void);
 
 void main(void) {
+
     WDTCTL = WDTPW + WDTHOLD;	// Stop watchdog timer
 
     Clock_Init();
@@ -35,12 +36,14 @@ void main(void) {
 #pragma vector=PORT1_VECTOR
 __interrupt void Port_1(void)
 {
-P1OUT ^= BIT0;    // P1.0 = toggle LED
-P1IFG &= ~BIT1; // P1.1 IFG cleared
-// P1IES ^= BUTTON; // toggle the interrupt edge,
-// the interrupt vector will be called
-// when P1.3 goes from HitoLow as well as
-// LowtoHigh
+	P1OUT ^= BIT0;  // P1.0 = toggle LED
+
+	P1IES ^= BIT1;  // toggle the interrupt edge,
+	                // the interrupt vector will be called
+	                // when P1.1 goes from HitoLow as well as
+	                // LowtoHigh
+
+	P1IFG &= ~BIT1; // P1.1 IFG cleared
 }
 
 void Timer_Tick_Init(void)
