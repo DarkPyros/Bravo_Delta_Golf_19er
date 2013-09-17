@@ -1,8 +1,6 @@
 #ifndef _WM8510CODECDRV_H_
 #define  _WM8510CODECDRV_H_
 
-#include "..\h\includes.h"
-
 #define WM8510DRV_DCI_MASTER 				1
 #define WM8510DRV_CODEC_FRAME 				80
 #define WM8510DRV_DRV_BUFFER_SIZE			(WM8510DRV_CODEC_FRAME * 4)
@@ -103,7 +101,9 @@ int 	WM8510IOCtl		(WM8510Handle * pHandle,int command, void * value);
 int 	WM8510IsReadBusy(WM8510Handle * pHandle);
 int		WM8510IsWriteBusy(WM8510Handle * pHandle);
 
-void 	WM8510CodecSampling(void);
+
+void WM8510RecordSampling();
+void WM8510PlaybackSampling();
 
 /* These are helper functions. Use if you need to	*/
 

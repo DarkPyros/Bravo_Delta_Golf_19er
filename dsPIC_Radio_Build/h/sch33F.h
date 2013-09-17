@@ -1,28 +1,33 @@
 #ifndef sch_H
 #define	sch_H
 
-//#define	SCH_update()	{__attribute__((__interrupt__,no_auto_psv)) _DCIInterrupt()}
-
 /******* Public data type declarations *******/
 
 /* Store in DATA area, if possible, for rapid access 
  * Total memory per task is 7 bytes
  */
-typedef struct
+typedef struct tagsTask
 {
-	// Pointer to the task (must be a 'void (void)' function)
+	/* Pointer to the task (must be a 'void (void)' function) */
 	void (*pTask)(void); 
-	// The tick the task will be run on
+	
+	/* The tick the task will be run on */
 	int ExecutionTick;
-	// Indicates if task is ready to execute
-	int RunMe;
+	
+	/* Set to 1 if task is co-operative
+	 * Set to 0 if task is pre-emptive
+	 */
+	int Co_op;
+
+	/* Indicates if task is ready to execute */
+	int RunMe;	
 } sTask;
 
 /******* Function Prototypes *******/
 	
 void SCH_initExtTrigger();
 void SCH_dispatchTasks();
-int SCH_addTask(void (*)(), const int);
+int SCH_addTask(void (*)(), const int, const int);
 unsigned char SCH_deleteTask(const int);
 void SCH_update();
 

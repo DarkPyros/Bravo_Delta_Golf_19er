@@ -8,6 +8,9 @@
 #define PLAYBACK_FLAG	_RB6
 #define RECORD_FLAG		_RB7
 
+/* Active mode for mode signal pins is LOW logic*/
+#define ACTIVE_MODE		0
+
 /* Output pin for synchronization timer */
 #define SYNC_CLK_PULSE_TRIS		_TRISB5
 #define SYNC_CLK_PULSE_PIN		_LATB5

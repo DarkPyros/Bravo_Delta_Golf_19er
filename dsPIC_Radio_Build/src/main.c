@@ -161,7 +161,7 @@
 #include "..\h\includes.h"
 
 /* Disable clock write protection
- * Select Primary osc w/ PLL
+ * Select Primary OSC w/ PLL
  * Clock switch enabled, OSC2 Pin digital I/O, external clock (12 MHZ)
  * Watchdog Time disabled
  */
@@ -170,6 +170,7 @@ _FOSCSEL(FNOSC_PRIPLL);
 _FOSC(FCKSM_CSECMD & OSCIOFNC_ON & POSCMD_EC);
 _FWDT(FWDTEN_OFF);
 
+/******* Private variable declarations *******/
 /* PACKED_BYTES - The number of bytes contained in G726A
  *                 packed data array					
  */
@@ -192,39 +193,71 @@ int 	codecBuffer		[WM8510DRV_DRV_BUFFER_SIZE];
 WM8510Handle codec;
 WM8510Handle * codecHandle = &codec;
 
-/* Flags
- * modeSelectFlag - indicates if radio is in transmit mode
- * */			
-int modeSelectFlag = IDLE;
+/* taskID - returned value from last SCH_addTask() call.
+ * 			Used for SCH_deleteTask() 
+ * modeFlag - Indicates if CC430 is placing dsPIC in 
+ * 			record, playback or idle mode.
+ * currentMode - Indicates the mode of hte dsPIC until 
+ *			the next mode check with CC430.
+ */
+int taskID;
+ 
+enum modes 	modeFlag;
+enum modes	currentMode;
+
+
 
 /* Index values */
-unsigned char i;	
+int i;	
 
-/* Function Declarations */
+/******* Function Declarations *******/
 void audioCodecInit();
-void modeCheck();
-void selectCodecMode();
-void recordMode();
-void playbackMode();
-void writeToSPI(unsigned char*, int);
-void readFromSPI(unsigned char*, int);
+void changeCodecSampling();
+void modeSelect();
+void encodeData();
+void decodeData();
+void writeToSPI();
+void readFromSPI();
 
 
 int main(void) {
 	
+	/* disable interrupts */
+	__asm__ volatile("disi #0x4"); 
+
+	/* Run initialization functions */
 	audioCodecInit();
-	SPISlaveInit();
+	SPI_SlaveInit();
+	SCH_initExtTrigger();
+	
+	/* In order to ensure the pre-emptive tasks are placed in 
+	 * location 0 during mode selection, the modeSelect task
+	 * is added twice and then the first iteration in location 0
+	 * is deleted.
+	 */
+	SCH_addTask(modeSelect, DELAY_MODE_SELECT, FRAME_PERIOD, CO_OP);
+	SCH_addTask(modeSelect, DELAY_MODE_SELECT, FRAME_PERIOD, CO_OP);
+	SCH_deleteTask(0);
+	
+	/* After initialization, wait until CC430 pulls both
+     * mode flags LOW */
+	while( (PLAYBACK_FLAG || RECORD_FLAG) );
+	
+	/* Once the CC430 signals it is ready, interrupts are enabled,  
+	 * the main process loop begins, and  synchronization pulses 
+	 * will be sent to CC430.*/
+	__asm__ volatile("disi #0x0"); 
 	
 	/* Main processing loop. */
 	while(1) {
-
-		
+		SCH_dispatchTasks();		
 	}	/* End of main processing loop */
-}	/* End of main() */
+} /* End of main() */
 
-/* Function definitions */
-	/* Initialization of audio controller*/
+/******* Function Definitions *******/
+/* Initialization of audio controller*/
 void audioCodecInit() {
+	
 	/* Configure Oscillator to operate the device at 80MHz / 40 MIPS.
 	 * Fosc= Fin*M/(N1*N2), Fcy=Fosc/2
 	 * Fosc= 12*40/(3*2)=80Mhz for 12MHz input clock */ 
@@ -255,49 +288,109 @@ void audioCodecInit() {
 	/* Initialize G.726A Encoder and Decoder. */
 	G726AEncoderInit(encoder, G726A_16KBPS, G726A_FRAME_SIZE);
 	G726ADecoderInit(decoder, G726A_16KBPS, G726A_FRAME_SIZE);
+
+	/* Set operating mode to IDLE */
+	modeFlag = IDLE;
+	currentMode = IDLE;
 } /* End of audioCodecInit() */
 
-void modeCheck() {
-	
-	if(PLAYBACK_FLAG == TRUE) {
-		/* Toggle to Playback Mode.
-		 * Turn on Green LED and Yellow LED off.
-		 * */		 
-		YELLOW_LED = SASK_LED_OFF;
-		GREEN_LED = SASK_LED_ON;
-		modeSelectFlag = PLAYBACK_MODE;						
-	}	
-	
-	else if(RECORD_FLAG == TRUE) {
-		/* Toggle Record Mode.
-		 * Turn on Yellow LED and Green LED off.
-		 * */		 
-		YELLOW_LED = SASK_LED_ON;
-		GREEN_LED = SASK_LED_OFF;
-		modeSelectFlag = RECORD_MODE;							
+/* Select the audio processing mode to run*/
+void modeSelect() {
+
+	/* Check the flags for new operating mode */
+	if(PLAYBACK_FLAG == ACTIVE_MODE) {
+		modeFlag = PLAYBACK;
 	}
-	
+	else if(RECORD_FLAG == ACTIVE_MODE) {
+		modeFlag = RECORD;
+	}
 	else {
-		/* If not in Playback or Record mode, default to Idle mode. */
-		YELLOW_LED = SASK_LED_OFF;
-		GREEN_LED = SASK_LED_OFF;
-		modeSelectFlag = PLAYBACK_MODE;
-	}
-}
-
-	/* Select the audio processing mode to run*/
-void selectCodecMode() {
-	if(modeSelectFlag == PLAYBACK_MODE) {
-		playbackMode();
+		modeFlag = IDLE;
 	}
 	
-	else if(modeSelectFlag == RECORD_MODE) {
-		recordMode();
-	}
-}
+	/* If operating mode has changed, delete existing tasks
+	 * and add tasks for new mode. */
+	if(modeFlag != currentMode) {
+	
+		if(modeFlag == PLAYBACK) {
+			/* Toggle indicator LEDs. */		 
+			YELLOW_LED = SASK_LED_OFF;
+			GREEN_LED = SASK_LED_ON;
+			
+			/* Delete all tasks expect pre-emptive task [0]
+			 * and modeSelect task [1]
+			 */
+			for(i=2; i < (SCH_MAX_TASKS); i++) {
+				SCH_deleteTask(i);
+			}
 
-	/* Read new frame from codec and encode. */
-void recordMode() {
+			SCH_addTask(readFromSPI, DELAY_READ_SPI, 	FRAME_PERIOD, CO_OP);
+			SCH_addTask(decodeData,  DELAY_DECODE_DATA, FRAME_PERIOD, CO_OP);
+			SCH_addTask(WM8510Write, DELAY_WM8510WRITE, FRAME_PERIOD, CO_OP);
+		}	
+		else if(modeFlag == RECORD) {
+			/* Toggle indicator LEDs. */		 
+			YELLOW_LED = SASK_LED_ON;
+			GREEN_LED = SASK_LED_OFF;
+			
+			/* Delete all tasks expect pre-emptive task [0]
+			 * and modeSelect task [1]
+			 */
+			for(i=2; i < (SCH_MAX_TASKS); i++) {
+				SCH_deleteTask(i);
+			}
+			
+			SCH_addTask(WM8510Read, DELAY_WM8510READ,  FRAME_PERIOD, CO_OP);
+			SCH_addTask(encodeData, DELAY_ENCODE_DATA, FRAME_PERIOD, CO_OP);
+			SCH_addTask(writeToSPI, DELAY_WRITE_SPI,   FRAME_PERIOD, CO_OP);	
+		}	
+		else {
+			/* Toggle indicator LEDs. */
+			YELLOW_LED = SASK_LED_OFF;
+			GREEN_LED = SASK_LED_OFF;
+					
+			/* Delete all tasks expect pre-emptive task [0]
+			 * and modeSelect task [1]
+			 */
+			for(i=2; i < (SCH_MAX_TASKS); i++) {
+				SCH_deleteTask(i);
+			}
+		}
+		
+		/* Add task to change the codec sampling mode at
+		 * the end of the frame. Task does not repeat.*/
+		SCH_addTask(changeCodecSampling, DELAY_CHANGE_CODEC_SAMPLING, 0, CO_OP);
+		
+		/* Current mode is set to new mode*/
+		currentMode = modeFlag;
+	}
+	/* If operating mode has not change, do nothing*/
+	else {
+		return;
+	}	
+} /* End of modeSelect() */
+
+/* Change the pre-emptive task based on a new operating mode */
+void changeCodecSampling() {
+	
+	/* Delete current pre-emptive task from list */
+	SCH_deleteTask(0);
+	
+	/* Add new pre-emptive based on current operating mode*/
+	if(currentMode == PLAYBACK) {
+		SCH_addTask(WM8510PlaybackSampling, DELAY_PLAYBACK_SAMPLING, 0, PRE_EMPTIVE);
+	}
+	else if(currentMode == RECORD) {
+		SCH_addTask(WM8510RecordSampling, DELAY_RECORD_SAMPLING, 0, PRE_EMPTIVE);
+	}
+	/* currentMode is IDLE, so there is no pre-emptive task */
+	else {
+		return;
+	}
+} /* End of changeCodecSampling() */
+
+/* Read new frame from codec and encode. */
+void encodeData() {
 				
 	/*Obtain Audio Samples
 	while(WM8510IsReadBusy(codecHandle));
@@ -324,10 +417,10 @@ void recordMode() {
 		G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
 		
 	}
-}	/* End of recordMode() */
+} /* End of encodeData() */
 
-	/* Write decoded frame to codec for playback. */
-void playbackMode() {
+/* Write decoded frame to codec for playback. */
+void decodeData() {
 	 
 	/* Wait till the codec is available for a new frame	
 	while(WM8510IsWriteBusy(codecHandle));	
@@ -353,44 +446,32 @@ void playbackMode() {
 		/* Write the frame to the output	*/
 		WM8510Write (codecHandle,decodedSamples,G726A_FRAME_SIZE);
 	}
-}	/* End of playbackMode() */
+}	/* End of decodeData() */
 
-	/* Select if writing or reading from SPI */
-void selectSPIMode() {
-	if(modeSelectFlag == PLAYBACK_MODE) {
-		/* Receive data from SPI and write to packedData array */
-		readFromSPI(packedData, PACKED_BYTES);		
-	}
-	
-	else if(modeSelectFlag == RECORD_MODE) {
-		/* Transmit data of packedData array over SPI */
-		writeToSPI(packedData, PACKED_BYTES);
-	}	
-}
-	/* Transmit an array of data using SPI */
-void writeToSPI(unsigned char* data, int size) {
+/* Transmit an array of data using SPI */
+void writeToSPI() {
 	unsigned char currentByte = 0;
 	
-	while(currentByte < size) {
+	while(currentByte < PACKED_BYTES) {
 		while(!SPI1STATbits.SPITBF);
 		
-		SPI1BUF = data[currentByte];
+		SPI1BUF = packedData[currentByte];
 		
 		currentByte++;
 	}
-}	/* End of writeToSPI() */
+} /* End of writeToSPI() */
 
-void readFromSPI(unsigned char* data, int size) {
+/* Receive an array of data using SPI*/
+void readFromSPI() {
 	unsigned char currentByte = 0;
 	
-	while(currentByte < size) {
+	while(currentByte < PACKED_BYTES) {
 		while(!SPI1STATbits.SPIRBF);
 		
-		data[currentByte] = SPI1BUF;
+		packedData[currentByte] = SPI1BUF;
 		
 		currentByte++;
 	}
-}	/* End of readFromSPI() */
+} /* End of readFromSPI() */
 
-
-/* End of File */
+/******* End of File *******/

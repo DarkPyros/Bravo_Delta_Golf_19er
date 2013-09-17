@@ -1,6 +1,6 @@
 #ifndef SPIBus_H
 #define DPIBus_H
 
-void SPISlaveInit();
+void SPI_SlaveInit();
 
 #endif

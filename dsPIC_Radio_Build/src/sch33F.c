@@ -1,5 +1,7 @@
 #include "../h/includes.h"
 
+#define	SCH_UPDATE()	__attribute__((__interrupt__,no_auto_psv))
+
 sTask SCH_tasks[SCH_MAX_TASKS];
 
 int tickCount = 0;
@@ -11,14 +13,14 @@ void SCH_initExtTrigger(){
 	SYNC_CLK_PULSE_PIN	= 0;		
 }
 
-void SCH_update() {
+void SCH_UPDATE() _DCIInterrupt() {
 	
 	/* Send synchronization clock pulse to other micro-controller*/
 	SYNC_CLK_PULSE_PIN ^= 1;
 	
 	/* Increment the frame time counter*/
 	if(tickCount == SCH_MAX_TICKS) {
-		tickCount = 0;
+		tickCount = 1;
 	}
 	else {
 		tickCount++;
@@ -28,14 +30,15 @@ void SCH_update() {
 	
 	for(i=0; i < SCH_MAX_TASKS; i++){
 		if(SCH_tasks[i].pTask){
-			/* If ExecitionTick == 255, the task is pre-emptive 
+			/* If Co_op == 1, the task is co-operative 
 			 * and run immediately. */
-			if(SCH_tasks[i].ExecutionTick == 255) {
-				(*(SCH_task[i]).pFunction)();
-			}
-			
-			else if(SCH_tasks[i].ExecutionTick == tickCount) {
+			if(SCH_tasks[i].Co_op == 1) {
 				SCH_tasks[i].RunMe = 1;	/* Set RunMe flag */
+			}
+			/* If Co_op == 0, the task is pre-emptive 
+			 * and runs immediately. */
+			else {
+				(SCH_tasks[i].pTask)();
 			}			
 		}
 	}
@@ -46,7 +49,7 @@ void SCH_dispatchTasks() {
 	
 	for(i=0; i < SCH_MAX_TASKS; i++) {
 		if(SCH_tasks[i].RunMe) {
-			(*SCH_task[i].pFunction)();
+			(SCH_tasks[i].pTask)();
 			
 			SCH_tasks[i].RunMe = 0;
 		}
@@ -56,7 +59,7 @@ void SCH_dispatchTasks() {
 /* tick = the sample tick during a frame the task 
  * will execute. Value between 1 to SCH_MAX_TICKS
  */ 
-int SCH_addTask(void (*pFunction)(), const int tick){
+int SCH_addTask(void (*pFunction)(), const int tick, const int co_op){
 	int i = 0;
 	
 	while( (SCH_tasks[i].pTask != 0) && (i < SCH_MAX_TASKS) ){
@@ -70,6 +73,7 @@ int SCH_addTask(void (*pFunction)(), const int tick){
 	if( (tick >= 1) && (tick <= SCH_MAX_TICKS) ) {
 		SCH_tasks[i].pTask = pFunction;
 		SCH_tasks[i].ExecutionTick = tick;
+		SCH_tasks[i].Co_op = co_op;
 		SCH_tasks[i].RunMe = 0;
 	}	
 	
@@ -77,7 +81,10 @@ int SCH_addTask(void (*pFunction)(), const int tick){
 	return i;
 }
 
-unsigned char SCH_deleteTask(const int) {
+unsigned char SCH_deleteTask(const int taskIndex) {
+	
+	unsigned char returnCode;
 
+	return returnCode;
 }
 /* End of File */

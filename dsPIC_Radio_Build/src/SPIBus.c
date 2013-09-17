@@ -22,7 +22,7 @@
 	.SPIEN = 1	//Enable SPI and configure SCK, SDO, SDI, SS port pins
 */	
 
-void SPISlaveInit(){
+void SPI_SlaveInit(){
 	SPI1BUF = 0;	//Clear SPI Buffer reg
 	IFS0bits.SPI1IF = 0;	// Clear the Interrupt Flag
 	IEC0bits.SPI1IE = 0;	// Disable the Interrupt//

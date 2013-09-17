@@ -1,56 +1,105 @@
+/* Hybrid Scheduler */
+
 #include "../h/includes.h"
 
-extern sTask SCH_tasks[SCH_MAX_TASKS];
+#define	SCH_UPDATE()	__attribute__((__interrupt__,no_auto_psv))
 
-void SCH_initExtTrigger(){
+sTask SCH_tasks[SCH_MAX_TASKS];
+
+void SCH_initExtTrigger() {
 	
-	/* Configure Change Notification pin 7 */
-	CNEN1bits.CN7IE = 1; // Enable CN7 pin for interrupt detection
-	IEC1bits.CNIE = 1; // Enable CN interrupts
-	IFS1bits.CNIF = 0; // Reset CN interrupt	
-}
+	/* Initialize PortB pin as output for synchronization clock pulse */
+	SYNC_CLK_PULSE_TRIS	= 0;
+	SYNC_CLK_PULSE_PIN	= 0;	
+} /* End of SCH_initExtTrigger() */
 
-void SCH_update() {
+void SCH_UPDATE() _DCIInterrupt() {
+	
+	/* Send synchronization clock pulse to other micro-controller */
+	SYNC_CLK_PULSE_PIN ^= 1;
 	
 	int i;
 	
 	for(i=0; i < SCH_MAX_TASKS; i++){
+		
+		/* Check for task at this position */
 		if(SCH_tasks[i].pTask){
-			if(SCH_tasks[i].Delay == 0){
-				SCH_tasks[i].RunMe = 1;	/* Set RunMe flag */
-			}
 			
-			if(SCH_tasks[i].Period){
-				SCH_tasks[i].Delay = SCH_tasks[i].Period;
+			/* Check if task is due to run */
+			if(SCH_tasks[i].Delay == 0) {
+			
+				/* If Co_op == 1, the task is co-operative 
+				 * so set RunMe flag. */
+				if(SCH_tasks[i].Co_op == 1) {
+					SCH_tasks[i].RunMe = 1;
+					
+					/* Schedule periodic task to run again */
+					if(SCH_tasks[i].Period) {
+						SCH_tasks[i].Delay = SCH_tasks[i].Period;
+					}
+					/* If 'one shot' task, remove from array */
+					else {
+						SCH_tasks[i].pTask = 0;
+					}
+				}
+				/* If Co_op == 0, the task is pre-emptive 
+				 * and runs immediately. */
+				else {
+					(SCH_tasks[i].pTask)();
+					SCH_tasks[i].RunMe = 0;
+				}				
 			}
-		}
-		else{
-			SCH_tasks[i].Delay -= 1;
+			else {
+				/* Task not ready; decrement Delay */
+				SCH_tasks[i].Delay -= 1;
+			}		
+		}		
+	}
+} /* SCH_update() */
+
+void SCH_dispatchTasks() {
+	int i = 0;
+	
+	for(i=0; i < SCH_MAX_TASKS; i++) {
+		if(SCH_tasks[i].RunMe) {
+			(SCH_tasks[i].pTask)();
+			
+			SCH_tasks[i].RunMe = 0;
 		}
 	}
-}
+} /* SCH_dispatchTasks() */
 
-void SCH_dispatchTasks()
-
-int SCH_addTask(void (code* pFunction)(), const int DELAY, const int PERIOD){
+int SCH_addTask(void (*pFunction)(), int delay, int period, int co_op) {
 	int i = 0;
 	
 	while( (SCH_tasks[i].pTask != 0) && (i < SCH_MAX_TASKS) ){
 		i++;
 	}
 	
-	if(i = SCH_MAX_TASKS){
+	if(i == SCH_MAX_TASKS) {
 		return SCH_MAX_TASKS;
 	}
-	
-	SCH_tasks[i].pTask = pFunction;
-	SCH_tasks[i].Delay = DELAY;
-	SCH_tasks[i].Period = PERIOD;
-	SCH_tasks[i].RunMe = 0;
-	
-	/* Return array position of task */
-	return i;
-}
+	else {
+		SCH_tasks[i].pTask = pFunction;
+		SCH_tasks[i].Delay = delay;
+		SCH_tasks[i].Period = period;
+		SCH_tasks[i].Co_op = co_op;
+		SCH_tasks[i].RunMe = 0;
+		
+		/* Return array position of task */
+		return i;
+	}
+} /* SCH_addTask() */
 
-unsigned char SCH_deleteTask(const int);
-/* End of File */
+void SCH_deleteTask(int task_index) {
+	
+	if(SCH_tasks[task_index].pTask) {
+		SCH_tasks[task_index].pTask = 0x0000;
+		SCH_tasks[task_index].Delay = 0;
+		SCH_tasks[task_index].Period = 0;
+		SCH_tasks[task_index].Co_op = 0;
+		SCH_tasks[task_index].RunMe = 0;
+	}
+} /* SCH_deleteTask() */
+
+/******* End of File *******/
