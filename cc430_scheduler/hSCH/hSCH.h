@@ -10,6 +10,7 @@
 #define HSCH_H_
 
 #include "../Main.h"
+#include "Init.h"
 
 // ------ Public data type declarations ----------------------------
 // Total memory per task is 8 bytes

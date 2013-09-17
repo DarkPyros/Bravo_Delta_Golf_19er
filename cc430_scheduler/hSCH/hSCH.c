@@ -281,9 +281,9 @@ void hSCH_Report_Status(void)
 -*------------------------------------------------------------------*/
 void hSCH_Go_To_Sleep()
 {
-	__bis_SR_register( LPM3 + GIE ); // Enter LPM3 w/ interrupts
+	//__bis_SR_register( LPM3 + GIE ); // Enter LPM3 w/ interrupts
 	                                 // enabled
-	__no_operation();                // For debugger
+	//__no_operation();                // For debugger
 }
 /*------------------------------------------------------------------*-
 ---- END OF FILE ------------------------------------------------

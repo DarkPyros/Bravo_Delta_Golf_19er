@@ -16,7 +16,8 @@
 -*------------------------------------------------------------------*/
 
 #include <msp430.h>
-#include "main.h"
+#include "Main.h"
+#include "Init.h"
 #include "hSCH.h"
 #include "hSCH430.h"
 
@@ -25,16 +26,8 @@
 
 void main(void) {
 
-    WDTCTL = WDTPW + WDTHOLD;	    // Stop watchdog timer
-
-    // Setup the clock
-    Clock_Init();
-
-	// Use Timer_A0 to provide the timer
-    // tick for development purposes
-    #ifdef TIMER_TICK_TA0
-    	Timer_A0_Init();
-	#endif
+    // Setup the clock and ports
+	Init();
 
     // Setup the scheduler
     hSCH_Init_P1_1();

@@ -1,13 +1,74 @@
 /*------------------------------------------------------------------*-
 
-  Port.C (v1.00)
+  Init.C (v1.00)
 
   ------------------------------------------------------------------
 
-  *** Clock and Timer_A0 initializations
+  *** Hardware Initializations for CC430
+
+        - Clock = 19.5 MHz from RF XT2
+        - Timer_A0 toggles a pin every 125 us
+        - Radio operates in 902 - 928 MHz
+        - Real-Time Clock
+
 
 -*------------------------------------------------------------------*/
-#include "port.h"
+#include "Init.h"
+
+// Rf settings for CC430
+const RF_SETTINGS rfSettings = {
+    0x06,  // IOCFG0        GDO0 Output Configuration
+    0x47,  // FIFOTHR       RX FIFO and TX FIFO Thresholds
+    0x05,  // PKTCTRL0      Packet Automation Control
+    0x7F,  // CHANNR        Channel Number
+    0x06,  // FSCTRL1       Frequency Synthesizer Control
+    0x22,  // FREQ2         Frequency Control Word, High Byte
+    0xB4,  // FREQ1         Frequency Control Word, Middle Byte
+    0x2F,  // FREQ0         Frequency Control Word, Low Byte
+    0xCA,  // MDMCFG4       Modem Configuration
+    0x83,  // MDMCFG3       Modem Configuration
+    0x13,  // MDMCFG2       Modem Configuration
+    0x35,  // DEVIATN       Modem Deviation Setting
+    0x10,  // MCSM0         Main Radio Control State Machine Configuration
+    0x16,  // FOCCFG        Frequency Offset Compensation Configuration
+    0x43,  // AGCCTRL2      AGC Control
+    0xFB,  // WORCTRL       Wake On Radio Control
+    0xE9,  // FSCAL3        Frequency Synthesizer Calibration
+    0x2A,  // FSCAL2        Frequency Synthesizer Calibration
+    0x00,  // FSCAL1        Frequency Synthesizer Calibration
+    0x1F,  // FSCAL0        Frequency Synthesizer Calibration
+    0x81,  // TEST2         Various Test Settings
+    0x35,  // TEST1         Various Test Settings
+    0x09,  // TEST0         Various Test Settings
+};
+
+/*------------------------------------------------------------------*-
+
+  Init()
+
+  Initialize the EM430F6147RF900 evaluation board.
+
+-*------------------------------------------------------------------*/
+void Init (void)
+{
+	// Stop watchdog timer
+	WDTCTL = WDTPW + WDTHOLD;
+
+	// Setup the clock
+	Clock_Init();
+
+	// Setup the RTC
+	RTC_Init();
+
+	// Setup the nonce timer
+	Timer_Init();
+
+	// Use Timer_A0 to provide the timer
+	// tick for development purposes
+	#ifdef TIMER_TICK_TA0
+	   	Timer_A0_Init();
+	#endif
+}
 
 
 /*------------------------------------------------------------------*-
@@ -18,7 +79,7 @@
   crystal on the EM430F6147RF900 evaluation board.
 
 -*------------------------------------------------------------------*/
-void Clock_Init(void)
+void Clock_Init (void)
 {
 	// Setup Clock
 	P5SEL |= BIT0 + BIT1;                     // Port select XT1
@@ -57,7 +118,7 @@ void Clock_Init(void)
 
 	__bis_SR_register(SCG0);                  // Disable the FLL control loop
 	UCSCTL0 = 0x0000;                         // Set lowest possible DCOx, MODx
-	UCSCTL1 = DCORSEL_7;                      // Select DCO range 20MHz operation
+	UCSCTL1 = DCORSEL_7;                      // Select DCO range for 20MHz operation
 	UCSCTL2 = FLLD_0 + 2;                     // Set DCO Multiplier for 20MHz
 	                                          // ((N + 1) * FLLRef) / FLLDiv = Fdco
 	                                          // ((2 + 1) * 6.5 MHz) / 1 = 19.5MHz
@@ -77,6 +138,62 @@ void Clock_Init(void)
 		                                      // Clear XT2,XT1,DCO fault flags
 		SFRIFG1 &= ~OFIFG;                    // Clear fault flags
 	}while (SFRIFG1&OFIFG);                   // Test oscillator fault flag
+}
+
+/*------------------------------------------------------------------*-
+
+  RTC_Init()
+
+  Initialize the Real-Time Clock
+
+-*------------------------------------------------------------------*/
+void RTC_Init(void)
+{
+  // Configure RTC_D
+  RTCCTL01 &= ~(RTCTEVIFG);               //Clear event interrupt
+  RTCCTL01 |= /*RTCTEVIE +*/ RTCHOLD;         //RTC hold, enable RTC
+                                          // event interrupt
+  RTCYEAR = 2013;                         // Year = 2011
+  RTCMON = 07;                            // Month = 10 = October
+  RTCDAY = 21;                            // Day = 7 = 7th
+  RTCDOW = 05;                            // Day of week = 5 = Friday
+  RTCHOUR = 22;                           // Hour = 11
+  RTCMIN = 59;                            // Minute = 59
+  RTCSEC = 55;                            // Seconds = 55
+  RTCCTL01 &= ~(RTCHOLD);                 // Start RTC calendar mode
+}
+
+/*------------------------------------------------------------------*-
+
+  Timer_Init()
+
+  Initialize Timer_TA1 for the microsecond nonce counter
+
+-*------------------------------------------------------------------*/
+void Timer_Init (void)
+{
+	// Reset and activate timer TA1
+	Timer_Reset();
+}
+
+/*------------------------------------------------------------------*-
+
+  Timer_Reset()
+
+  Reset Timer_TA1 for the microsecond nonce counter
+
+-*------------------------------------------------------------------*/
+void Timer_Reset (void)
+{
+	// Set TAIDEX to 4 for a clock divider of /5
+	TA1EX0 = 0x0004;
+
+	// TASSEL_2 = set timer clock source to SMCLK
+	// ID_2 = set clock divider to /4, along with TAIDEX for
+	//        a total clock divider of /20
+	// MC_2 = continuous up counting
+	// TACLR = resets and activates the timer counter
+	TA1CTL = TASSEL_2 + ID_2 + MC_2 + TACLR;	//Reset and activate Counter
 }
 
 /*------------------------------------------------------------------*-

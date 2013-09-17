@@ -15,7 +15,6 @@
 
 // Must include the appropriate microcontroller header file here
 #include <msp430.h>
-#include "port.h"
 
 // Must include oscillator / chip details here if delays are used
 // -
