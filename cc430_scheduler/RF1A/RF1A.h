@@ -3,7 +3,7 @@
 #ifndef RF1A_H_
 #define RF1A_H_
 
-#include <msp430.h>
+#include "../init/init.h"
 
 typedef struct S_RF_SETTINGS {
     unsigned char fsctrl1;   // Frequency synthesizer control.
@@ -26,6 +26,9 @@ typedef struct S_RF_SETTINGS {
     unsigned char agcctrl2;  // AGC control.
     unsigned char agcctrl1;  // AGC control.
     unsigned char agcctrl0;  // AGC control.
+    unsigned char worevt1;   //
+    unsigned char worevt0;   //
+    unsigned char worctrl;   //
     unsigned char fscal3;    // Frequency synthesizer calibration.
     unsigned char fscal2;    // Frequency synthesizer calibration.
     unsigned char fscal1;    // Frequency synthesizer calibration.
@@ -46,7 +49,7 @@ typedef struct S_RF_SETTINGS {
 void ResetRadioCore (void);
 unsigned char Strobe(unsigned char strobe);
 
-void WriteRfSettings(RF_SETTINGS *pRfSettings);
+void WriteRfSettings(const RF_SETTINGS *pRfSettings);
 
 void WriteSingleReg(unsigned char addr, unsigned char value);
 void WriteBurstReg(unsigned char addr, unsigned char *buffer, unsigned char count);

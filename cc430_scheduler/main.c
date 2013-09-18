@@ -16,8 +16,8 @@
 -*------------------------------------------------------------------*/
 
 #include <msp430.h>
-#include "Main.h"
-#include "Init.h"
+#include "main.h"
+#include "./init/init.h"
 #include "hSCH.h"
 #include "hSCH430.h"
 

@@ -9,8 +9,7 @@
 #ifndef INIT_H_
 #define INIT_H_
 
-#include "../Main.h"
-#include "../RF1A/RF1A.h"
+#include "../main.h"
 
 // ------ hSCH.C ----------------------------------------
 

@@ -169,7 +169,7 @@ void ResetRadioCore (void)
 // @param       RF_SETTINGS *pRfSettings  Pointer to the structure that holds the rf settings
 // @return      none
 // *****************************************************************************
-void WriteRfSettings (RF_SETTINGS *pRfSettings)
+void WriteRfSettings (const RF_SETTINGS *pRfSettings)
 {
 	WriteSingleReg(FSCTRL1,  pRfSettings->fsctrl1);
 	WriteSingleReg(FSCTRL0,  pRfSettings->fsctrl0);
@@ -191,6 +191,9 @@ void WriteRfSettings (RF_SETTINGS *pRfSettings)
 	WriteSingleReg(AGCCTRL2, pRfSettings->agcctrl2);
 	WriteSingleReg(AGCCTRL1, pRfSettings->agcctrl1);
 	WriteSingleReg(AGCCTRL0, pRfSettings->agcctrl0);
+	WriteSingleReg(WOREVT1, pRfSettings->worevt1);
+	WriteSingleReg(WOREVT0, pRfSettings->worevt0);
+	WriteSingleReg(WORCTRL, pRfSettings->worctrl);
 	WriteSingleReg(FSCAL3,   pRfSettings->fscal3);
 	WriteSingleReg(FSCAL2,   pRfSettings->fscal2);
 	WriteSingleReg(FSCAL1,   pRfSettings->fscal1);
