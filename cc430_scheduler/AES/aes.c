@@ -1,4 +1,3 @@
-#include <msp430.h>
 #include "aes.h"
 
 unsigned char AES_setCipherKey (unsigned int baseAddress,

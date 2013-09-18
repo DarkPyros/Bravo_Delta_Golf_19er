@@ -3,7 +3,7 @@
 #ifndef RF1A_H_
 #define RF1A_H_
 
-#include "../init/init.h"
+#include "../main.h"
 
 typedef struct S_RF_SETTINGS {
     unsigned char fsctrl1;   // Frequency synthesizer control.

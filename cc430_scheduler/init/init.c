@@ -7,7 +7,7 @@
   *** Hardware Initializations for CC430
 
         - Clock = 19.5 MHz from RF XT2
-        - Timer_A0 toggles a pin every 125 us
+        - Timer_A0 toggles an output pin every 125 us
         - Radio operates in 902 - 928 MHz
         - Real-Time Clock
 

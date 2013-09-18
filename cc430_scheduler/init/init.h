@@ -11,19 +11,7 @@
 
 #include "../main.h"
 
-// ------ hSCH.C ----------------------------------------
-
-// Comment this line out if error reporting is NOT required
-//#define SCH_REPORT_ERRORS
-
-#ifdef SCH_REPORT_ERRORS
-// The port on which error codes will be displayed
-// ONLY USED IF ERRORS ARE REPORTED
-#define Error_port P1OUT
-
-#endif
-
-// ------ Port.C ----------------------------------------
+// ------ Init.C ----------------------------------------
 
 // Comment this line out if timer tick from Timer_A0 is NOT required
 // Sourcing the timer tick from Timer_A0 should only be required during

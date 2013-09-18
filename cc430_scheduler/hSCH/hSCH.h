@@ -9,7 +9,7 @@
 #ifndef HSCH_H_
 #define HSCH_H_
 
-#include "../init/init.h"
+#include "../main.h"
 
 // ------ Public data type declarations ----------------------------
 // Total memory per task is 8 bytes
@@ -42,13 +42,6 @@ void hSCH_Dispatch_Tasks(void);
 tByte hSCH_Add_Task(void (*)(void), tWord, tWord, tByte);
 tByte hSCH_Delete_Task(tByte);
 void hSCH_Report_Status(void);
-
-// ------ Public constants -----------------------------------------
-// The maximum number of tasks required at any one time
-// during the execution of the program
-//
-// MUST BE ADJUSTED FOR EACH NEW PROJECT
-#define hSCH_MAX_TASKS (10)
 
 #endif /* HSCH_H_ */
 

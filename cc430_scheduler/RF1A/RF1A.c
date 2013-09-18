@@ -191,9 +191,9 @@ void WriteRfSettings (const RF_SETTINGS *pRfSettings)
 	WriteSingleReg(AGCCTRL2, pRfSettings->agcctrl2);
 	WriteSingleReg(AGCCTRL1, pRfSettings->agcctrl1);
 	WriteSingleReg(AGCCTRL0, pRfSettings->agcctrl0);
-	WriteSingleReg(WOREVT1, pRfSettings->worevt1);
-	WriteSingleReg(WOREVT0, pRfSettings->worevt0);
-	WriteSingleReg(WORCTRL, pRfSettings->worctrl);
+	WriteSingleReg(WOREVT1,  pRfSettings->worevt1);
+	WriteSingleReg(WOREVT0,  pRfSettings->worevt0);
+	WriteSingleReg(WORCTRL,  pRfSettings->worctrl);
 	WriteSingleReg(FSCAL3,   pRfSettings->fscal3);
 	WriteSingleReg(FSCAL2,   pRfSettings->fscal2);
 	WriteSingleReg(FSCAL1,   pRfSettings->fscal1);

@@ -1,6 +1,8 @@
 #ifndef AES_H_
 #define AES_H_
 
+#include "../main.h"
+
 #define HWREG(x)     	(*((volatile unsigned int *)(x)))
 
 #define STATUS_SUCCESS  0x01
@@ -22,7 +24,7 @@
 #define OFS_AESADOUT_L         OFS_AESADOUT
 #define OFS_AESADOUT_H         OFS_AESADOUT+1
 
-typedef struct {
+typedef struct S_NONCE {
 	int year;
 	char month;
 	char day;

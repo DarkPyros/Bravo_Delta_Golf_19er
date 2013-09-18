@@ -15,14 +15,32 @@
 
 // Must include the appropriate microcontroller header file here
 #include <msp430.h>
+#include "./HAL/HAL_MACROS.h"
+#include "./HAL/HAL_PMM.h"
 
 // Must include oscillator / chip details here if delays are used
 // -
 // Oscillator frequency (in Hz) e.g. (19500000UL)
 #define OSC_FREQ (19500000UL)
 
-// Number of oscillations per instruction (6 or 12)
-#define OSC_PER_INST (1)
+// ------ Public constants -----------------------------------------
+// The maximum number of tasks required at any one time
+// during the execution of the program
+//
+// MUST BE ADJUSTED FOR EACH NEW PROJECT
+#define hSCH_MAX_TASKS (10)
+
+// ------ hSCH.C ----------------------------------------
+
+// Comment this line out if error reporting is NOT required
+//#define SCH_REPORT_ERRORS
+
+#ifdef SCH_REPORT_ERRORS
+// The port on which error codes will be displayed
+// ONLY USED IF ERRORS ARE REPORTED
+#define Error_port P1OUT
+
+#endif
 
 //----------------------------------------------------------------------
 // SHOULD NOT NEED TO EDIT THE SECTIONS BELOW
