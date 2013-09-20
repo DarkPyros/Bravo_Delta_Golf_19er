@@ -24,11 +24,16 @@
 #define OSC_FREQ (19500000UL)
 
 // ------ Public constants -----------------------------------------
+
 // The maximum number of tasks required at any one time
 // during the execution of the program
 //
 // MUST BE ADJUSTED FOR EACH NEW PROJECT
 #define hSCH_MAX_TASKS (10)
+
+// Timer tick input pin
+// The pin which receives the timer tick signal is P1.6
+#define TIMER_TICK_INPUT_PIN (BIT6)
 
 // ------ hSCH.C ----------------------------------------
 

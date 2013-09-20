@@ -23,9 +23,8 @@
 #endif
 
 // Comment this line out if outputting the MCLK, SMCLK, and ACLK signals
-// is NOT required.
-// Outputting the clock signals should only be required during
-// development.
+// is NOT required. Outputting the clock signals should only be required
+// during development.
 //#define DEBUG_CLOCK_OUTPUT
 
 void Init (void);

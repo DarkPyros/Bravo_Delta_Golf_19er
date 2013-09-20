@@ -129,11 +129,11 @@ void RTC_Init(void)
 	RTCCTL01 &= ~(RTCTEVIFG);               //Clear event interrupt
 	RTCCTL01 |= /*RTCTEVIE +*/ RTCHOLD;         //RTC hold, enable RTC
 	                                        // event interrupt
-	RTCYEAR = 2013;                         // Year = 2011
-	RTCMON = 07;                            // Month = 10 = October
-	RTCDAY = 21;                            // Day = 7 = 7th
-	RTCDOW = 05;                            // Day of week = 5 = Friday
-	RTCHOUR = 22;                           // Hour = 11
+	RTCYEAR = 2013;                         // Year = 2013
+	RTCMON = 07;                            // Month = 7 = July
+	RTCDAY = 21;                            // Day = 21 = 21st
+	RTCDOW = 00;                            // Day of week = 0 = Sunday
+	RTCHOUR = 22;                           // Hour = 22
 	RTCMIN = 59;                            // Minute = 59
 	RTCSEC = 55;                            // Seconds = 55
 	RTCCTL01 &= ~(RTCHOLD);                 // Start RTC calendar mode
@@ -176,20 +176,27 @@ void Timer_Reset (void)
 
   Timer_A0_Init()
 
-  Setup Timer_A0 to toggle the output of P3.1 in order to provide
+  Setup Timer_A0 to toggle the output of P3.6 in order to provide
   a 125 us timer tick source during development. A jumper should
-  be set from P3.1 to P1.1 in order to use this as the timer tick
-  source.
+  be set from P3.6 to TIMER_TICK_INPUT_PIN in order to use this as
+  the timer tick source.
 
 -*------------------------------------------------------------------*/
 #ifdef TIMER_TICK_TA0
 	void Timer_A0_Init (void)
 	{
-		// Set P3.1 as an output
+		// Get write-access to port mapping regs
+		PMAPPWD = 0x02D52;
+		// Map Timer_TA0 output to P3.6
+		P3MAP6 = PM_TA0CCR0A;
+		// Lock port mapping registers
+		PMAPPWD = 0;
+
+		// Set P3.6 as an output
 		// and enable its peripheral functions
-		// P3.1 = PM_TA0CCR0A
-		P3DIR |= BIT1;
-		P3SEL |= BIT1;
+		// P3.6 = PM_TA0CCR0A
+		P3DIR |= BIT6;
+		P3SEL |= BIT6;
 
 		// Set TAIDEX to 0 for a clock divider of /1
 		TA0EX0 = TAIDEX_0;

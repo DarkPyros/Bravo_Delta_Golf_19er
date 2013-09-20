@@ -28,7 +28,8 @@ extern tByte Error_code_G;
   hSCH_Init_P1_1()
 
   Scheduler initialization function. Prepares scheduler
-  data structures and sets up to receive timer interrupt on P1.1.
+  data structures and sets up to receive timer interrupt on
+  TIMER_TICK_INPUT_PIN (defined in Main.h).
   Must call this function before using the scheduler.
 
 -*------------------------------------------------------------------*/
@@ -46,21 +47,22 @@ void hSCH_Init_P1_1(void)
 	// (because the task array is empty)
 	Error_code_G = 0;
 
-	// Set up P1.1 as the timer tick interrupt source
-	// P1SEL disables the P1.1 peripheral function
-	// P1DIR sets P1.1 as an input
+	// Set up the timer tick input pin as the timer
+	// tick interrupt source
+	// P1SEL disables the peripheral function
+	// P1DIR sets the pin as an input
 	// P1REN enables the pull-up/down resistor
 	// P1IES sets a high-to-low transition interrupt edge select
 	// P1IFG clears any pending interrupts
 	// P1OUT sets the pull resistor as a pull-up
 	// P1IE enables the interrupt
-	P1SEL &= ~BIT1;
-	P1DIR &= ~BIT1;
-	P1REN |= BIT1;
-	P1OUT |= BIT1;
-	P1IE  |= BIT1;
-	P1IES |= BIT1;
-	P1IFG &= ~BIT1;
+	P1SEL &= ~TIMER_TICK_INPUT_PIN;
+	P1DIR &= ~TIMER_TICK_INPUT_PIN;
+	P1REN |=  TIMER_TICK_INPUT_PIN;
+	P1OUT |=  TIMER_TICK_INPUT_PIN;
+	P1IE  |=  TIMER_TICK_INPUT_PIN;
+	P1IES |=  TIMER_TICK_INPUT_PIN;
+	P1IFG &= ~TIMER_TICK_INPUT_PIN;
 }
 
 /*------------------------------------------------------------------*-
@@ -87,7 +89,8 @@ void hSCH_Start(void)
 
   This is the scheduler ISR. It is called at a rate
   determined by the timer settings in hSCH_Init().
-  This version is triggered by an external interrupt on P1.1.
+  This version is triggered by an external interrupt on
+  TIMER_TICK_INPUT_PIN (defined in Main.h).
 
 -*------------------------------------------------------------------*/
 // Port 1 interrupt service routine
