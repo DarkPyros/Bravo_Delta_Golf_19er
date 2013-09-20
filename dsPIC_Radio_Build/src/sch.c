@@ -10,14 +10,17 @@ void SCH_initExtTrigger() {
 	
 	/* Initialize PortB pin as output for synchronization clock pulse */
 	SYNC_CLK_PULSE_TRIS	= 0;
-	SYNC_CLK_PULSE_PIN	= 0;	
+	SYNC_CLK_PULSE_PIN	= 0;
 } /* End of SCH_initExtTrigger() */
 
 void SCH_UPDATE() _DCIInterrupt() {
+
+	_DCIIF = 0;;
 	
 	/* Send synchronization clock pulse to other micro-controller */
+if(transceiverReady == TRUE) {
 	SYNC_CLK_PULSE_PIN ^= 1;
-	
+}
 	int i;
 	
 	for(i=0; i < SCH_MAX_TASKS; i++){

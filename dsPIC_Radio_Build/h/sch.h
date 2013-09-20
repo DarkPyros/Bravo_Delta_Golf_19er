@@ -31,7 +31,7 @@ typedef struct tagsTask
 	
 void SCH_initExtTrigger();
 void SCH_dispatchTasks();
-int SCH_addTask(void (*)(), int, int, int);
+int  SCH_addTask(void (*)(), int, int, int);
 void SCH_deleteTask(int);
 void SCH_update();
 

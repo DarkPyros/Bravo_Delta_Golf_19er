@@ -11,6 +11,11 @@ enum modes {
 	IDLE
 };
 
+extern enum modes 	modeFlag;
+extern enum modes	currentMode;
+
+extern int transceiverReady;
+
 /* Task delay times*/
 #define	DELAY_PLAYBACK_SAMPLING		0
 #define	DELAY_READ_SPI				4

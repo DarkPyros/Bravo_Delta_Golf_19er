@@ -75,6 +75,10 @@
 #define REGULATOR_CONTROL_LAT		LATBbits.LATB5
 #define REGULATOR_WAKE_UP_DELAY	0x800
 
+
+extern int debounceS1;
+extern int debounceS2;
+
 void SASKInit(void);
 int CheckSwitchS1(void);
 int CheckSwitchS2(void);

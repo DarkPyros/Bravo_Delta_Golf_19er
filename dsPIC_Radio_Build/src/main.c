@@ -193,19 +193,20 @@ int 	codecBuffer		[WM8510DRV_DRV_BUFFER_SIZE];
 WM8510Handle codec;
 WM8510Handle * codecHandle = &codec;
 
-/* taskID - returned value from last SCH_addTask() call.
- * 			Used for SCH_deleteTask() 
+/* taskID - Returned value from last SCH_addTask() call.
+ * 			Used for SCH_deleteTask()
+ * transceiverReady - Set FALSE to prevent SYNC_CLK
+			output until CC430 is initialized.
  * modeFlag - Indicates if CC430 is placing dsPIC in 
  * 			record, playback or idle mode.
  * currentMode - Indicates the mode of hte dsPIC until 
  *			the next mode check with CC430.
  */
 int taskID;
- 
+int transceiverReady = FALSE;
+
 enum modes 	modeFlag;
 enum modes	currentMode;
-
-
 
 /* Index values */
 int i;	
@@ -219,17 +220,12 @@ void decodeData();
 void writeToSPI();
 void readFromSPI();
 
-
 int main(void) {
-	
-	/* disable interrupts */
-	__asm__ volatile("disi #0x4"); 
 
-	/* Run initialization functions */
+	/* Run initialization functions */	
+	INIT_init();
 	audioCodecInit();
-	SPI_SlaveInit();
-	SCH_initExtTrigger();
-	
+
 	/* In order to ensure the pre-emptive tasks are placed in 
 	 * location 0 during mode selection, the modeSelect task
 	 * is added twice and then the first iteration in location 0
@@ -240,13 +236,17 @@ int main(void) {
 	SCH_deleteTask(0);
 	
 	/* After initialization, wait until CC430 pulls both
-     * mode flags LOW */
-	while( (PLAYBACK_FLAG || RECORD_FLAG) );
-	
-	/* Once the CC430 signals it is ready, interrupts are enabled,  
-	 * the main process loop begins, and  synchronization pulses 
-	 * will be sent to CC430.*/
-	__asm__ volatile("disi #0x0"); 
+     * mode flags LOW.
+	 */
+	//while( (PLAYBACK_FLAG || RECORD_FLAG) );
+	/* FOR TEST PURPOSES */
+	while((CheckSwitchS1()) == 0);
+
+	/* Once the CC430 signals it is ready, transceiver is set TRUE
+	 * and synchronization pulses in SCH_UPDATES() will be sent
+	 * to CC430.
+	 */
+	transceiverReady = TRUE;
 	
 	/* Main processing loop. */
 	while(1) {
@@ -255,28 +255,10 @@ int main(void) {
 } /* End of main() */
 
 /******* Function Definitions *******/
-/* Initialization of audio controller*/
+/* Initialization of the WM8510 codec and G726A codec */
 void audioCodecInit() {
 	
-	/* Configure Oscillator to operate the device at 80MHz / 40 MIPS.
-	 * Fosc= Fin*M/(N1*N2), Fcy=Fosc/2
-	 * Fosc= 12*40/(3*2)=80Mhz for 12MHz input clock */ 
-	PLLFBD=38;				/* M = PLLFBD + 2 = 40	*/
-	CLKDIVbits.PLLPRE=1;	/* N1 = PLLPRE + 2 = 3	*/
-	CLKDIVbits.PLLPOST=0;	/* N2 = PLLPOST + 2 = 2	*/
-	OSCTUN=0;			
-	
-	__builtin_write_OSCCONH(0x01);		/*	Initiate Clock Switch to FRC with PLL*/
-	__builtin_write_OSCCONL(0x01);
-	while (OSCCONbits.COSC != 0b01);	/*	Wait for Clock switch to occur	*/
-	while(!OSCCONbits.LOCK);
-
-	/* Initialize PortB pins as inputs for mode selection */
-	PLAYBACK_TRIS  = 1;
-	RECORD_TRIS = 1;
-	
-	/* Initialize the board and the drivers	*/
-	SASKInit();
+	/* Initialize the codec drivers	*/
 	WM8510Init(codecHandle,codecBuffer);
 	
 	/* Start Audio input and output function */
@@ -289,9 +271,6 @@ void audioCodecInit() {
 	G726AEncoderInit(encoder, G726A_16KBPS, G726A_FRAME_SIZE);
 	G726ADecoderInit(decoder, G726A_16KBPS, G726A_FRAME_SIZE);
 
-	/* Set operating mode to IDLE */
-	modeFlag = IDLE;
-	currentMode = IDLE;
 } /* End of audioCodecInit() */
 
 /* Select the audio processing mode to run*/

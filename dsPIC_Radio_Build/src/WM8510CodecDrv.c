@@ -157,8 +157,6 @@ void WM8510Write(WM8510Handle * pHandle, int * data, int size)
 
 void WM8510RecordSampling() {
 
-	_DCIIF = 0;
-	
 	thisWM8510Codec->activeInputBuffer[thisWM8510Codec->currentSampleIndex] = RXBUF0;
 	thisWM8510Codec->currentSampleIndex++;
 	
@@ -190,8 +188,6 @@ void WM8510RecordSampling() {
 
 void WM8510PlaybackSampling() {
 
-	_DCIIF = 0;
-	
 	TXBUF0 = thisWM8510Codec->activeOutputBuffer[thisWM8510Codec->currentSampleIndex];
 	thisWM8510Codec->currentSampleIndex++;
 
