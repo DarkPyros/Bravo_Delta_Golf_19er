@@ -11,6 +11,7 @@
 
 #include "../main.h"
 #include "../RF1A/RF1A.h"
+#include "../hSCH/hSCH.h"
 
 // Radio configuration defines
 #define  PACKET_LEN		(0x2B)	    	// PACKET_LEN <= 61
@@ -20,5 +21,6 @@
 #define  PATABLE_VAL	(0x51)          // 0 dBm output
 
 void Radio_Init (void);
+void Radio_Read_RX_FIFO(tByte * const, tByte);
 
 #endif /* RADIO_H_ */

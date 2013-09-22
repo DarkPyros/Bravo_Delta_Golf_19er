@@ -35,6 +35,17 @@ typedef struct
 
 } sTaskH;
 
+// ------ Public variable declarations -----------------------------
+
+// The array of tasks (see hSCH.C)
+extern sTaskH hSCH_tasks_G[hSCH_MAX_TASKS];
+
+// The error code variable
+//
+// See Main.H for port on which error codes are displayed
+// and for details of error codes
+extern tByte Error_code_G;
+
 #define CO_OP (1)
 #define PRE_EMP (0)
 
@@ -45,6 +56,8 @@ void hSCH_Dispatch_Tasks(void);
 tByte hSCH_Add_Task(void (*)(void), tWord, tWord, tByte);
 tByte hSCH_Delete_Task(tByte);
 void hSCH_Report_Status(void);
+tByte hSCH_Set_Error_Code(tByte);
+tByte hSCH_Get_Error_Code(void);
 
 #endif /* HSCH_H_ */
 

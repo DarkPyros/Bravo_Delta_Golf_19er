@@ -29,7 +29,7 @@
 // during the execution of the program
 //
 // MUST BE ADJUSTED FOR EACH NEW PROJECT
-#define hSCH_MAX_TASKS (15)
+#define hSCH_MAX_TASKS (5)
 
 // Timer tick rate in the number of microseconds between
 // timer ticks.
@@ -38,6 +38,9 @@
 // Timer tick input pin
 // The pin which receives the timer tick signal is P1.6
 #define TIMER_TICK_INPUT_PIN (BIT6)
+
+// Audio frame size in bytes
+#define AUDIO_FRAME_SIZE (20)
 
 // Defines for setting the flag output port and pins
 // for signaling the dsPIC as to what to do next.
@@ -90,6 +93,7 @@ typedef unsigned long long tLongLong;
 #define ERROR_SCH_CANNOT_DELETE_TASK (2)
 #define ERROR_SCH_SPI_TX_ERROR (3)
 #define ERROR_SCH_SPI_RX_ERROR (4)
+#define ERROR_RADIO_RX_CRC_BAD (5)
 
 #define ERROR_SCH_WAITING_FOR_START_COMMAND_FROM_MASTER (0xAA)
 #define ERROR_SCH_ONE_OR_MORE_SLAVES_DID_NOT_START (0xA0)

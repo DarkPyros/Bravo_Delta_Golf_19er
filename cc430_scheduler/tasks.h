@@ -11,14 +11,14 @@
 
 #include "main.h"
 
-#define AUDIO_FRAME_SIZE (20)
-
 typedef enum { RECEIVE, TRANSMIT } MODE;
 typedef enum { MASTER, SLAVE } ROLE;
 typedef enum { SYNCED, SYNC_LOST } SYNC;
 
+void Schedule_Tasks (void);
 void Change_Channel_Task (void);
-void Synchronization_Task (void);
+void Start_Synchronization_Task (void);
+void Slave_Synchronization_Task (void);
 void RNG_Generate_Task (void);
 void RNG_Harvest_Task (void);
 void SPI_Send_Task (void);

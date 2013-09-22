@@ -11,6 +11,7 @@
 
 #include "../main.h"
 #include "../init/init.h"
+#include "../hSCH/hSCH.h"
 
 void SPI_Init (void);
 void SPI_Send (tByte const * const, tByte);

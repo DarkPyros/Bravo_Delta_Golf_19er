@@ -67,6 +67,11 @@ tByte RNG_Get_Rand (void)
 	return rand;
 }
 
+tByte * RNG_Get_Nonce (void)
+{
+	return (tByte *)&Nonce;
+}
+
 void Nonce_Init (void)
 {
 	Nonce.year = (tWord)RTCYEAR;
@@ -98,6 +103,17 @@ void Update_Nonce (void)
 	Nonce.counter += timer;
 
 	Nonce_Timer_Reset();
+}
+
+void Overwrite_Nonce (tByte const * const New_Nonce, tByte size)
+{
+	tByte i;
+	tByte * nonce = RNG_Get_Nonce();
+
+	for (i = 0; i < size; i++)
+	{
+		nonce[i] = New_Nonce[i];
+	}
 }
 
 /*------------------------------------------------------------------*-

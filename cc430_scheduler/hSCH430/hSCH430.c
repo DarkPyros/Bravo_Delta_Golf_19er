@@ -12,17 +12,6 @@
 
 #include "hSCH430.h"
 
-// ------ Public variable declarations -----------------------------
-
-// The array of tasks (see hSCH.C)
-extern sTaskH hSCH_tasks_G[hSCH_MAX_TASKS];
-
-// The error code variable
-//
-// See Main.H for port on which error codes are displayed
-// and for details of error codes
-extern tByte Error_code_G;
-
 /*------------------------------------------------------------------*-
 
   hSCH_Init_P1_1()
@@ -99,6 +88,8 @@ __interrupt void hSCH_Update(void)
 {
 	tByte Index;
 
+	//LED_ON;
+
 	// NOTE: calculations are in *TICKS* (not milliseconds)
 	for (Index = 0; Index < hSCH_MAX_TASKS; Index++)
 	{
@@ -149,6 +140,8 @@ __interrupt void hSCH_Update(void)
 			                        // Low-to-High
 
 	P1IFG &= ~TIMER_TICK_INPUT_PIN; // Clear interrupt flag
+
+	//LED_OFF;
 }
 
 /*------------------------------------------------------------------*-

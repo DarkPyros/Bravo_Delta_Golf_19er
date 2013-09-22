@@ -33,7 +33,7 @@ void Init (void)
 	Flags_Init();
 
 	// Increase PMMCOREV level to 3 for proper radio operation
-	SetVCore(3);
+	//SetVCore(3);
 
 	// Setup the clock
 	Clock_Init();
@@ -210,6 +210,10 @@ void LED_Init (void)
 -*------------------------------------------------------------------*/
 void Flags_Init (void)
 {
+	P3DIR |= (BIT7);
+	P3SEL &= ~(BIT7);
+	P3OUT &= ~(BIT7);
+
 	FLAG_PORT_DIR |= RECORD_FLAG + PLAYBACK_FLAG;
 	FLAG_PORT_SEL &= ~(RECORD_FLAG + PLAYBACK_FLAG);
 	FLAG_PORT |= RECORD_FLAG + PLAYBACK_FLAG;

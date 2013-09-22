@@ -8,8 +8,6 @@
 
 #include "spi.h"
 
-extern tByte Error_code_G;
-
 /*------------------------------------------------------------------*-
 
   SPI_Init()
@@ -79,7 +77,7 @@ void SPI_Send (tByte const * const txData, tByte count)
 	// If the sandwich timer overflows, set the global error
 	// variable to ERROR_SCH_SPI_TX_ERROR
 	if (Sandwich_Timer_Overflow())
-		Error_code_G = ERROR_SCH_SPI_TX_ERROR;
+		hSCH_Set_Error_Code(ERROR_SCH_SPI_TX_ERROR);
 }
 
 /*------------------------------------------------------------------*-
@@ -111,5 +109,5 @@ void SPI_Receive (tByte * const rxData, tByte count)
 	// If the sandwich timer overflows, set the global error
 	// variable to ERROR_SCH_SPI_RX_ERROR
 	if (Sandwich_Timer_Overflow())
-		Error_code_G = ERROR_SCH_SPI_RX_ERROR;
+		hSCH_Set_Error_Code(ERROR_SCH_SPI_RX_ERROR);
 }

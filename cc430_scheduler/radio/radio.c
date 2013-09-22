@@ -93,3 +93,25 @@ void Radio_Init (void)
 
 	WriteSinglePATable(PATABLE_VAL);
 }
+
+void Radio_Read_RX_FIFO(tByte * const RX_Buffer, tByte size)
+{
+	tByte RX_Buffer_Length;
+
+	// Read the length byte from the FIFO
+	RX_Buffer_Length = ReadSingleReg( RXBYTES );
+
+	if (RX_Buffer_Length == size)
+	{
+		ReadBurstReg(RF_RXFIFORD, RX_Buffer, RX_Buffer_Length);
+
+		// Stop here to see contents of RxBuffer
+		__no_operation();
+
+		// Check the CRC results
+		if(!(RX_Buffer[CRC_LQI_IDX] & CRC_OK))
+		{
+			Error_code_G = ERROR_RADIO_RX_CRC_BAD;
+		}
+	}
+}

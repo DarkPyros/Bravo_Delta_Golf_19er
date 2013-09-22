@@ -258,6 +258,18 @@ void hSCH_Report_Status(void)
 	#endif
 }
 
+tByte hSCH_Set_Error_Code(tByte error)
+{
+	Error_code_G = error;
+
+	return RETURN_NORMAL;
+}
+
+tByte hSCH_Get_Error_Code(void)
+{
+	return Error_code_G;
+}
+
 /*------------------------------------------------------------------*-
 
   hSCH_Go_To_Sleep()
@@ -281,9 +293,9 @@ void hSCH_Report_Status(void)
 -*------------------------------------------------------------------*/
 void hSCH_Go_To_Sleep()
 {
-	//__bis_SR_register( LPM3 + GIE ); // Enter LPM3 w/ interrupts
-	                                 // enabled
-	//__no_operation();                // For debugger
+	//__bis_SR_register( LPM0_bits + GIE ); // Enter LPM0 w/ interrupts
+	                                 	  // enabled
+	//__no_operation();                     // For debugger
 }
 /*------------------------------------------------------------------*-
 ---- END OF FILE ------------------------------------------------

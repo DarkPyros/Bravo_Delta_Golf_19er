@@ -29,27 +29,14 @@ extern ROLE Role_Flag_G;
 void main(void) {
 
     // Setup the clock and ports
-	Init();
+d	Init();
 
     // Setup the scheduler
     hSCH_Init_P1_1();
 
     // Add tasks here
-    if (Role_Flag_G == MASTER)
-    {
-    	hSCH_Add_Task(Change_Channel_Task, 0, 80, PRE_EMP);
-        hSCH_Add_Task(RNG_Generate_Task, 1, 1280, CO_OP);
-        hSCH_Add_Task(RNG_Harvest_Task, 4, 1280, CO_OP);
-        hSCH_Add_Task(Synchronization_Task, 5, 80, CO_OP);
-    }
-    else
-    {
-    	hSCH_Add_Task(Change_Channel_Task, 0, 800, PRE_EMP);
-    	hSCH_Add_Task(RNG_Generate_Task, 1, 12800, CO_OP);
-    	hSCH_Add_Task(RNG_Harvest_Task, 4, 12800, CO_OP);
-    	hSCH_Add_Task(Synchronization_Task, 5, 800, CO_OP);
-    }
-
+    //Schedule_Tasks();
+    hSCH_Add_Task(SPI_Send_Task, 0, 79, PRE_EMP);
 
     // Start the scheduler
     hSCH_Start();

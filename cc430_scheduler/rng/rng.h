@@ -29,8 +29,10 @@ void RNG_Init (void);
 void RNG_Generate (void);
 void RNG_Harvest (void);
 tByte RNG_Get_Rand (void);
+tByte * RNG_Get_Nonce (void);
 void Nonce_Init (void);
 void Update_Nonce (void);
+void Overwrite_Nonce (tByte const * const, tByte);
 void Nonce_Timer_Init (void);
 void Nonce_Timer_Reset (void);
 
