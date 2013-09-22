@@ -160,6 +160,15 @@
 
 #include "..\h\includes.h"
 
+
+#if defined USE_SFM_CHIP
+#include "..\h\SFMDrv.h"
+#define FRAME_SIZE 				80		
+#define SPEECH_SEGMENT_SIZE		29184L	
+#define WRITE_START_ADDRESS	0x20000
+#endif
+
+
 /* Disable clock write protection
  * Select Primary OSC w/ PLL
  * Clock switch enabled, OSC2 Pin digital I/O, external clock (12 MHZ)
@@ -183,6 +192,27 @@ unsigned char encodedSamples[G726A_FRAME_SIZE];
 unsigned char packedData[PACKED_BYTES];
 unsigned char encoder[G726A_ENCODER_SIZE];
 unsigned char decoder[G726A_DECODER_SIZE];
+
+#if defined USE_SFM_CHIP
+char 	flashMemoryBuffer	[SFMDRV_BUFFER_SIZE];
+SST25VF040BHandle flashMemoryHandle; 
+
+
+/* Addresses 
+ * currentReadAddress - This one tracks the intro message	
+ * currentWriteAddress - This one tracks the writes to flash	
+ * userPlaybackAddress - This one tracks user playback		
+ * address - Used during flash erase
+ * */
+
+/*USE_SFM_CHIP */
+long currentReadAddress;		
+long currentWriteAddress;		
+long userPlaybackAddress;		
+long address;	
+int erasedBeforeRecord;
+#endif
+
 
 /* Allocate memory for buffers and drivers
  * codecBuffer - Buffer used by the codec driver
@@ -209,45 +239,77 @@ enum modes 	modeFlag;
 enum modes	currentMode;
 
 /* Index values */
-int i;	
 
 /******* Function Declarations *******/
 void audioCodecInit();
 void changeCodecSampling();
 void modeSelect();
 void encodeData();
+void readCodec();
 void decodeData();
+void writeCodec();
 void writeToSPI();
 void readFromSPI();
 
 int main(void) {
 
+#if defined USE_SFM_CHIP
+/* Addresses 
+ * currentReadAddress - This one tracks the intro message	
+ * currentWriteAddress - This one tracks the writes to flash	
+ * userPlaybackAddress - This one tracks user playback		
+ * address - Used during flash erase
+ * */
+long currentReadAddress = 0;		
+long currentWriteAddress = WRITE_START_ADDRESS;		
+long userPlaybackAddress = WRITE_START_ADDRESS;		
+long address = 0;							
+
+/* flags
+ * record - if set means recording
+ * playback - if set mean playback
+ * erasedBeforeRecord - means SFM eras complete before record
+ * */
+int record = 0;						
+int playback = 0;					
+int erasedBeforeRecord = 0;	
+#endif
+
 	/* Run initialization functions */	
 	INIT_init();
 	audioCodecInit();
 
+#if defined USE_SFM_CHIP
+SFMInit(flashMemoryBuffer);
+#endif
+
 	/* In order to ensure the pre-emptive tasks are placed in 
 	 * location 0 during mode selection, the modeSelect task
-	 * is added twice and then the first iteration in location 0
-	 * is deleted.
+	 * is added twice. The first iteration in location 0 will 
+	 * be replaced by pre-emptive.
 	 */
+	SCH_addTask(WM8510IdleSampling, 1, 0, CO_OP);
 	SCH_addTask(modeSelect, DELAY_MODE_SELECT, FRAME_PERIOD, CO_OP);
-	SCH_addTask(modeSelect, DELAY_MODE_SELECT, FRAME_PERIOD, CO_OP);
-	SCH_deleteTask(0);
 	
 	/* After initialization, wait until CC430 pulls both
      * mode flags LOW.
 	 */
-	//while( (PLAYBACK_FLAG || RECORD_FLAG) );
-	/* FOR TEST PURPOSES */
-	while((CheckSwitchS1()) == 0);
+//	while( (PLAYBACK_FLAG || RECORD_FLAG) );
+
+#if defined TIMING_TEST
+TIMING_PULSE_TRIS = 0;
+TIMING_PULSE_PIN = 0;
+
+modeFlag = PLAYBACK;
+while((CheckSwitchS1()) == 0);
+#endif
 
 	/* Once the CC430 signals it is ready, transceiver is set TRUE
 	 * and synchronization pulses in SCH_UPDATES() will be sent
 	 * to CC430.
 	 */
 	transceiverReady = TRUE;
-	
+
 	/* Main processing loop. */
 	while(1) {
 		SCH_dispatchTasks();		
@@ -276,6 +338,21 @@ void audioCodecInit() {
 /* Select the audio processing mode to run*/
 void modeSelect() {
 
+	int i = 0;
+
+#if defined TIMING_MODE_SELECT
+	TIMING_PULSE_PIN ^= 1;
+#endif
+	
+#if defined TIMING_TEST
+	/* Check the switches for new operating mode */
+	if( (CheckSwitchS1()) == 1 ) {
+		modeFlag = PLAYBACK;
+	}
+	else if( (CheckSwitchS2()) == 1 ) {
+		modeFlag = RECORD;
+	}
+#else
 	/* Check the flags for new operating mode */
 	if(PLAYBACK_FLAG == ACTIVE_MODE) {
 		modeFlag = PLAYBACK;
@@ -286,6 +363,8 @@ void modeSelect() {
 	else {
 		modeFlag = IDLE;
 	}
+
+#endif
 	
 	/* If operating mode has changed, delete existing tasks
 	 * and add tasks for new mode. */
@@ -305,7 +384,7 @@ void modeSelect() {
 
 			SCH_addTask(readFromSPI, DELAY_READ_SPI, 	FRAME_PERIOD, CO_OP);
 			SCH_addTask(decodeData,  DELAY_DECODE_DATA, FRAME_PERIOD, CO_OP);
-			SCH_addTask(WM8510Write, DELAY_WM8510WRITE, FRAME_PERIOD, CO_OP);
+			SCH_addTask(writeCodec, DELAY_WM8510WRITE, FRAME_PERIOD, CO_OP);
 		}	
 		else if(modeFlag == RECORD) {
 			/* Toggle indicator LEDs. */		 
@@ -319,7 +398,7 @@ void modeSelect() {
 				SCH_deleteTask(i);
 			}
 			
-			SCH_addTask(WM8510Read, DELAY_WM8510READ,  FRAME_PERIOD, CO_OP);
+			SCH_addTask(readCodec, DELAY_WM8510READ,  FRAME_PERIOD, CO_OP);
 			SCH_addTask(encodeData, DELAY_ENCODE_DATA, FRAME_PERIOD, CO_OP);
 			SCH_addTask(writeToSPI, DELAY_WRITE_SPI,   FRAME_PERIOD, CO_OP);	
 		}	
@@ -346,12 +425,16 @@ void modeSelect() {
 	/* If operating mode has not change, do nothing*/
 	else {
 		return;
-	}	
+	}
+
+#if defined TIMING_MODE_SELECT
+	TIMING_PULSE_PIN ^= 1;
+#endif	
 } /* End of modeSelect() */
 
 /* Change the pre-emptive task based on a new operating mode */
 void changeCodecSampling() {
-	
+
 	/* Delete current pre-emptive task from list */
 	SCH_deleteTask(0);
 	
@@ -364,13 +447,19 @@ void changeCodecSampling() {
 	}
 	/* currentMode is IDLE, so there is no pre-emptive task */
 	else {
-		return;
+		SCH_addTask(WM8510IdleSampling, DELAY_PLAYBACK_SAMPLING, 0, PRE_EMPTIVE);	
 	}
 } /* End of changeCodecSampling() */
 
 /* Read new frame from codec and encode. */
 void encodeData() {
 				
+	int i;	
+
+	#if defined TIMING_ENCODE_DATA
+		TIMING_PULSE_PIN ^= 1;
+	#endif
+
 	/*Obtain Audio Samples
 	while(WM8510IsReadBusy(codecHandle));
 	*/
@@ -378,14 +467,10 @@ void encodeData() {
 	/* Wait till the codec is ready with a new frame */	
 	if(WM8510IsReadBusy(codecHandle) == FALSE) {
 		
-		/* Obtain audio samples from codec */
-		WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);				
-
 		/* Scale samples from 16-bit to 14-bit */
 		for(i = 0; i < G726A_FRAME_SIZE; i ++)
 		{
-			// Not necessary if its known that input
-			// is 14 bits or less.			
+			/* Not necessary if its known that input is 14 bits or less. */	
 			rawSamples[i] = rawSamples[i] >> 2;
 		}
 
@@ -396,11 +481,26 @@ void encodeData() {
 		G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
 		
 	}
+
+#if defined TIMING_ENCODE_DATA
+	TIMING_PULSE_PIN ^= 1;
+#endif
 } /* End of encodeData() */
+
+/* Obtain audio samples from codec */
+void readCodec() {
+	WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);
+} /* End of readCodec() */
 
 /* Write decoded frame to codec for playback. */
 void decodeData() {
-	 
+
+	int i;	
+	
+	#if defined TIMING_DECODE_DATA
+		TIMING_PULSE_PIN ^= 1;
+	#endif
+	
 	/* Wait till the codec is available for a new frame	
 	while(WM8510IsWriteBusy(codecHandle));	
 	*/
@@ -421,36 +521,64 @@ void decodeData() {
 			 * encode */
 			decodedSamples[i] = decodedSamples[i] << 2;
 		}
-
-		/* Write the frame to the output	*/
-		WM8510Write (codecHandle,decodedSamples,G726A_FRAME_SIZE);
 	}
+	else {
+	}
+
+	#if defined TIMING_DECODE_DATA
+		TIMING_PULSE_PIN ^= 1;
+	#endif
 }	/* End of decodeData() */
+
+/* Write the frame to the output. */
+void writeCodec() {
+	WM8510Write(codecHandle, decodedSamples, G726A_FRAME_SIZE);
+} /* End of writeCodec */
 
 /* Transmit an array of data using SPI */
 void writeToSPI() {
+
+	#if defined TIMING_WRITE_SPI
+		TIMING_PULSE_PIN ^= 1;
+	#endif
+
 	unsigned char currentByte = 0;
 	
 	while(currentByte < PACKED_BYTES) {
+#ifndef NO_WAIT_SPI
 		while(!SPI1STATbits.SPITBF);
-		
+#endif		
 		SPI1BUF = packedData[currentByte];
 		
 		currentByte++;
 	}
+
+	#if defined TIMING_WRITE_SPI
+		TIMING_PULSE_PIN ^= 1;
+	#endif
 } /* End of writeToSPI() */
 
 /* Receive an array of data using SPI*/
 void readFromSPI() {
+
+	#if defined TIMING_READ_SPI
+		TIMING_PULSE_PIN ^= 1;
+	#endif
+
 	unsigned char currentByte = 0;
 	
 	while(currentByte < PACKED_BYTES) {
+#ifndef NO_WAIT_SPI
 		while(!SPI1STATbits.SPIRBF);
-		
+#endif		
 		packedData[currentByte] = SPI1BUF;
 		
 		currentByte++;
 	}
+
+	#if defined TIMING_READ_SPI
+		TIMING_PULSE_PIN ^= 1;
+	#endif
 } /* End of readFromSPI() */
 
 /******* End of File *******/

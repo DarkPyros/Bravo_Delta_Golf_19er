@@ -15,4 +15,9 @@
 #define SYNC_CLK_PULSE_TRIS		_TRISB5
 #define SYNC_CLK_PULSE_PIN		_LATB5
 
+#if defined TIMING_TEST
+#define 	TIMING_PULSE_TRIS	_TRISB2
+#define 	TIMING_PULSE_PIN 	_LATB2
+#endif
+
 #endif

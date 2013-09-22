@@ -15,49 +15,60 @@ void SCH_initExtTrigger() {
 
 void SCH_UPDATE() _DCIInterrupt() {
 
-	_DCIIF = 0;;
+	_DCIIF = 0;
 	
-	/* Send synchronization clock pulse to other micro-controller */
-if(transceiverReady == TRUE) {
-	SYNC_CLK_PULSE_PIN ^= 1;
-}
-	int i;
+	#if defined TIMING_SCH_UPDATE
+		TIMING_PULSE_PIN ^= 1;
+	#endif
 	
-	for(i=0; i < SCH_MAX_TASKS; i++){
+	/* Start sending synchronization clock pulse to other micro-controller
+	 * and updating tasks once the ready signal has been received*/
+	if(transceiverReady == TRUE) {
+		SYNC_CLK_PULSE_PIN ^= 1;
+
+		int i;
 		
-		/* Check for task at this position */
-		if(SCH_tasks[i].pTask){
+		for(i=0; i < SCH_MAX_TASKS; i++){
 			
-			/* Check if task is due to run */
-			if(SCH_tasks[i].Delay == 0) {
-			
-				/* If Co_op == 1, the task is co-operative 
-				 * so set RunMe flag. */
-				if(SCH_tasks[i].Co_op == 1) {
-					SCH_tasks[i].RunMe = 1;
-					
-					/* Schedule periodic task to run again */
-					if(SCH_tasks[i].Period) {
-						SCH_tasks[i].Delay = SCH_tasks[i].Period;
+			/* Check for task at this position */
+			if(SCH_tasks[i].pTask){
+				
+				/* Check if task is due to run */
+				if(SCH_tasks[i].Delay == 0) {
+				
+					/* If Co_op == 1, the task is co-operative 
+					 * so set RunMe flag. */
+					if(SCH_tasks[i].Co_op == 1) {
+						SCH_tasks[i].RunMe = 1;
+						
+						/* Schedule periodic tasks to run again */
+						if(SCH_tasks[i].Period) {
+							SCH_tasks[i].Delay = SCH_tasks[i].Period;
+						}
+						else {
+						}
 					}
-					/* If 'one shot' task, remove from array */
+					/* If Co_op == 0, the task is pre-emptive 
+					 * and runs immediately. */
 					else {
-						SCH_tasks[i].pTask = 0;
-					}
+						(SCH_tasks[i].pTask)();
+						SCH_tasks[i].RunMe = 0;
+					}				
 				}
-				/* If Co_op == 0, the task is pre-emptive 
-				 * and runs immediately. */
 				else {
-					(SCH_tasks[i].pTask)();
-					SCH_tasks[i].RunMe = 0;
-				}				
+					/* Task not ready; decrement Delay */
+					SCH_tasks[i].Delay -= 1;
+				}		
 			}
 			else {
-				/* Task not ready; decrement Delay */
-				SCH_tasks[i].Delay -= 1;
-			}		
-		}		
+			}
+		}
 	}
+	else {
+	}
+	#if defined TIMING_SCH_UPDATE
+		TIMING_PULSE_PIN ^= 1;
+	#endif	
 } /* SCH_update() */
 
 void SCH_dispatchTasks() {
@@ -67,7 +78,18 @@ void SCH_dispatchTasks() {
 		if(SCH_tasks[i].RunMe) {
 			(SCH_tasks[i].pTask)();
 			
+			/* If 'one shot' task, remove from array; otherwise make
+			 * task not ready.
+			 */
+			if(SCH_tasks[i].Period == 0) {
+				//SCH_tasks[i].pTask = 0;
+				SCH_deleteTask(i);
+			}
+			else {
 			SCH_tasks[i].RunMe = 0;
+			}
+		}
+		else {
 		}
 	}
 } /* SCH_dispatchTasks() */
@@ -102,6 +124,9 @@ void SCH_deleteTask(int task_index) {
 		SCH_tasks[task_index].Period = 0;
 		SCH_tasks[task_index].Co_op = 0;
 		SCH_tasks[task_index].RunMe = 0;
+	}
+	else {
+		return;
 	}
 } /* SCH_deleteTask() */
 

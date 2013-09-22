@@ -64,6 +64,10 @@ void WM8510Stop(WM8510Handle * pHandle)
 
 void WM8510Read(WM8510Handle * pHandle, int * data, int size)
 {
+	#if defined TIMING_WM_READ
+		TIMING_PULSE_PIN ^= 1;
+	#endif
+
 	/* The buffer indicator bit in the status register determines which	
 	 * which buffer can be read. If flag is 0 then buffer 2 should be read
 	 * else buffer should be read. */
@@ -100,6 +104,10 @@ void WM8510Read(WM8510Handle * pHandle, int * data, int size)
 	__asm__ volatile("disi #0x4"); /* disable interrupts */
 	pHandle->statusFlag |= WM8510DRV_SET_READ_BUSY;
 	__asm__ volatile("disi #0x0"); /* enable interrupts */
+
+	#if defined TIMING_WM_READ
+	TIMING_PULSE_PIN ^= 1;
+	#endif
 }
 	
 int WM8510IsWriteBusy(WM8510Handle *pHandle)
@@ -114,6 +122,11 @@ int  WM8510IsReadBusy(WM8510Handle *pHandle)
 
 void WM8510Write(WM8510Handle * pHandle, int * data, int size)
 {
+
+	#if defined TIMING_WM_WRITE
+		TIMING_PULSE_PIN ^= 1;
+	#endif
+
 	/* The buffer indicator bit in the status register determines which	
 	 * which buffer can be written to. If flag is 0 then buffer 2 should be 
 	 * written to since the driver is writing buffer 1 to the output. */
@@ -153,6 +166,10 @@ void WM8510Write(WM8510Handle * pHandle, int * data, int size)
 	__asm__ volatile("disi #0x4"); /* disable interrupts */
 	pHandle->statusFlag |= WM8510DRV_SET_WRITE_BUSY;
 	__asm__ volatile("disi #0x0"); /* enable interrupts */
+
+	#if defined TIMING_WM_WRITE
+		TIMING_PULSE_PIN ^= 1;
+	#endif
 }
 
 void WM8510RecordSampling() {
@@ -184,7 +201,7 @@ void WM8510RecordSampling() {
 	else {
 		return;
 	}
-} /* End of WM8510RecordSampling */
+} /* End of WM8510RecordSampling() */
 
 void WM8510PlaybackSampling() {
 
@@ -215,8 +232,15 @@ void WM8510PlaybackSampling() {
 	else {
 		return;
 	}
-} /* End of WM8510PlaybackSampling */
-	
+} /* End of WM8510PlaybackSampling() */
+
+void WM8510IdleSampling() {
+		thisWM8510Codec->currentSampleIndex = 0;		
+		thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
+		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
+		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_WRITE_BUSY;
+} /* End of WM8510IdleSampling() */
+
 int WM8510IOCtl(WM8510Handle * pHandle,int command, void * value)
 {
 	/* Use the I2C module to send the control data to the codec

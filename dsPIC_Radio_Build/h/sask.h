@@ -44,8 +44,8 @@
 #define RED_LED_TRIS		_TRISC15
 
 #define YELLOW_LED		_LATC13
-#define GREEN_LED			_LATC14
-#define RED_LED		_LATC15
+#define GREEN_LED		_LATC14
+#define RED_LED			_LATC15
 
 /* The Switches and their ports */
 

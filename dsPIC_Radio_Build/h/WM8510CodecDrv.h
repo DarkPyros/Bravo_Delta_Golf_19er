@@ -104,6 +104,7 @@ int		WM8510IsWriteBusy(WM8510Handle * pHandle);
 
 void WM8510RecordSampling();
 void WM8510PlaybackSampling();
+void WM8510IdleSampling();
 
 /* These are helper functions. Use if you need to	*/
 
