@@ -1,3 +1,16 @@
+/*------------------------------------------------------------------*-
+  Radio.C (v1.00)
+  ------------------------------------------------------------------
+
+  CC430 radio module interface and radio configuration settings.
+  The radio is configured to operate in the 902 - 928 MHz ISM band
+  while employing frequency hopping spread spectrum (FHSS) within
+  that band. It uses 128 channels, equally spaced between
+  902.3 MHz and 927.7 MHz, with a channel spacing of 200 KHz. The
+  baud rate is 76.8 kBaud with 2-GFSK modulation.
+
+-*------------------------------------------------------------------*/
+
 #include "radio.h"
 
 // Product = CC430F6147
@@ -5,9 +18,9 @@
 // Crystal accuracy = 10 ppm
 // X-tal frequency = 26 MHz
 // RF output power = 0 dBm
-// RX filter bandwidth = 101.562500 kHz
-// Deviation = 20.629883 kHz
-// Data Rate = 38.3835 kBaud
+// RX filter bandwidth = 203.125000 kHz
+// Deviation = 41.259766 kHz
+// Data Rate = 76.767 kBaud
 // Modulation = 2-GFSK
 // Manchester enable = (0) Manchester disabled
 // RF Frequency = 902.299896 MHz
@@ -28,18 +41,18 @@
 // GDO0 signal selection = ( 6) Asserts when sync word has been sent / received, and de-asserts at the end of the packet
 // GDO2 signal selection = (41) RF_RDY
 const RF_SETTINGS rfSettings = {
-    0x06,	// FSCTRL1   Frequency Synthesizer Control
+    0x08,	// FSCTRL1   Frequency Synthesizer Control
     0x00,   // FSCTRL0   Frequency synthesizer control.
     0x22,   // FREQ2     Frequency Control Word, High Byte
     0xB4,   // FREQ1     Frequency Control Word, Middle Byte
     0x2F,   // FREQ0     Frequency Control Word, Low Byte
-    0xCA,   // MDMCFG4   Modem Configuration
+    0x8B,   // MDMCFG4   Modem Configuration
     0x83,   // MDMCFG3   Modem Configuration
     0x13,   // MDMCFG2   Modem Configuration
     0x22,   // MDMCFG1   Modem configuration.
     0xF8,   // MDMCFG0   Modem configuration.
     0x00,   // CHANNR    Channel number.
-    0x35,   // DEVIATN   Modem Deviation Setting
+    0x45,   // DEVIATN   Modem Deviation Setting
     0x56,   // FREND1    Front end RX configuration.
     0x10,   // FREND0    Front end TX configuration.
     0x10,   // MCSM0     Main Radio Control State Machine Configuration
@@ -65,18 +78,16 @@ const RF_SETTINGS rfSettings = {
     0x04,   // PKTCTRL1  Packet automation control.
     0x05,   // PKTCTRL0  Packet automation control.
     0x00,   // ADDR      Device address.
-    0x33    // PKTLEN    Packet length.
+    PACKET_LEN // PKTLEN    Packet length.
 };
-
-#define PATABLE_VAL (0x51)
 
 void Radio_Init (void)
 {
 	// Set the High-Power Mode Request Enable bit so LPM3 can be entered
 	// with active radio enabled
-	PMMCTL0_H = 0xA5;
-	PMMCTL0_L |= PMMHPMRE_L;
-	PMMCTL0_H = 0x00;
+	//PMMCTL0_H = 0xA5;
+	//PMMCTL0_L |= PMMHPMRE_L;
+	//PMMCTL0_H = 0x00;
 
 	WriteRfSettings(&rfSettings);
 

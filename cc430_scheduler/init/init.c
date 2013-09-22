@@ -14,6 +14,8 @@
 -*------------------------------------------------------------------*/
 #include "init.h"
 #include "../radio/radio.h"
+#include "../spi/spi.h"
+#include "../rng/rng.h"
 
 /*------------------------------------------------------------------*-
 
@@ -27,23 +29,38 @@ void Init (void)
 	// Stop watchdog timer
 	WDTCTL = WDTPW + WDTHOLD;
 
+	// Setup the flags for signaling the dsPIC
+	Flags_Init();
+
+	// Increase PMMCOREV level to 3 for proper radio operation
+	SetVCore(3);
+
 	// Setup the clock
 	Clock_Init();
 
 	// Setup the RTC
 	RTC_Init();
 
-	// Setup the nonce timer
-	Timer_Init();
-
-	//Setup the CC430 radio
+	// Setup the CC430 radio
 	Radio_Init();
+
+	// Setup the SPI module
+	SPI_Init();
+
+	// Setup LED output
+	LED_Init();
 
 	// Use Timer_A0 to provide the timer
 	// tick for development purposes
 	#ifdef TIMER_TICK_TA0
 	   	Timer_A0_Init();
 	#endif
+
+	// Setup the AES module
+	AES_Init();
+
+	// Setup random number generator
+	RNG_Init();
 }
 
 
@@ -126,9 +143,8 @@ void Clock_Init (void)
 void RTC_Init(void)
 {
 	// Configure RTC_D
-	RTCCTL01 &= ~(RTCTEVIFG);               //Clear event interrupt
-	RTCCTL01 |= /*RTCTEVIE +*/ RTCHOLD;         //RTC hold, enable RTC
-	                                        // event interrupt
+	RTCCTL01 &= ~(RTCTEVIFG);               // Clear event interrupt
+	RTCCTL01 |= RTCHOLD;                    // RTC hold
 	RTCYEAR = 2013;                         // Year = 2013
 	RTCMON = 07;                            // Month = 7 = July
 	RTCDAY = 21;                            // Day = 21 = 21st
@@ -141,35 +157,76 @@ void RTC_Init(void)
 
 /*------------------------------------------------------------------*-
 
-  Timer_Init()
+  Sandwich_Timer_Init()
 
-  Initialize Timer_TA1 for the microsecond nonce counter
+  Setup a Timer_TA1 capture compare register as a sandwich timer
+  in order to give certain while() loops a maximum run time.
 
 -*------------------------------------------------------------------*/
-void Timer_Init (void)
+void Sandwich_Timer_Init (void)
 {
-	// Reset and activate timer TA1
-	Timer_Reset();
+	tWord current_time;
+
+	// Get the current value of timer TA1
+	do
+	{
+		current_time = TA1R;
+	} while (current_time != TA1R);
+
+	// Set Timer_TA1 capture compare register 1 to the current
+	// timer value plus the (TIMER_TICK_RATE - 20), which is used
+	// to give certain while() loops a maximum run time.
+	TA1CCR0 = current_time + (TIMER_TICK_RATE - 20);
+
+	// ~(CAP) = set mode to output compare
+	// ~(CCIE) = disable the timer interrupt
+	// ~(CCIFG) = clear any pending interrupt flags
+	// When the timer value, TA1R, equals TA1CCR0,
+	// the CCIFG bit will be set in TA1CCTL0
+	TA1CCTL0 = ~(CAP + CCIE + CCIFG);
 }
 
 /*------------------------------------------------------------------*-
 
-  Timer_Reset()
+  LED_Init()
 
-  Reset Timer_TA1 for the microsecond nonce counter
+  Initialize the LED in order to use it for debugging
 
 -*------------------------------------------------------------------*/
-void Timer_Reset (void)
+void LED_Init (void)
 {
-	// Set TAIDEX to 4 for a clock divider of /5
-	TA1EX0 = 0x0004;
+	LED_PORT_DIR |= LED;
+	LED_PORT_SEL &= ~LED;
+	LED_OFF;
+}
 
-	// TASSEL_2 = set timer clock source to SMCLK
-	// ID_2 = set clock divider to /4, along with TAIDEX for
-	//        a total clock divider of /20
-	// MC_2 = continuous up counting
-	// TACLR = resets and activates the timer counter
-	TA1CTL = TASSEL_2 + ID_2 + MC_2 + TACLR;	//Reset and activate Counter
+/*------------------------------------------------------------------*-
+
+  Flags_Init()
+
+  Initialize the flag pins used for signaling the dsPIC what we
+  are going to do next.
+
+-*------------------------------------------------------------------*/
+void Flags_Init (void)
+{
+	FLAG_PORT_DIR |= RECORD_FLAG + PLAYBACK_FLAG;
+	FLAG_PORT_SEL &= ~(RECORD_FLAG + PLAYBACK_FLAG);
+	FLAG_PORT |= RECORD_FLAG + PLAYBACK_FLAG;
+}
+
+/*------------------------------------------------------------------*-
+
+  Flags_Pulled_Low()
+
+  Pull both flag pins low to signal to the dsPIC that we are
+  ready to receive timer ticks. This should be called after
+  interrupts have been enabled.
+
+-*------------------------------------------------------------------*/
+void Flags_Pulled_Low (void)
+{
+	FLAG_PORT = FLAG_PORT & ~(RECORD_FLAG + PLAYBACK_FLAG);
 }
 
 /*------------------------------------------------------------------*-
@@ -208,6 +265,7 @@ void Timer_Reset (void)
 		TA0CCR0 = 1624;
 
 		// ~(CAP) = set mode to output compare
+		// ~(CCIE) = disable the timer interrupt
 		// OUTMOD_5 = toggle output pin
 		// OUTMOD_5 operates correctly as the toggle mode even though the user guide
 		// says that toggle mode is OUTMOD_4. OUTMOD_4 seems to operate as set/reset.

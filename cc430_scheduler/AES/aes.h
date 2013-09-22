@@ -24,19 +24,13 @@
 #define OFS_AESADOUT_L         OFS_AESADOUT
 #define OFS_AESADOUT_H         OFS_AESADOUT+1
 
-typedef struct S_NONCE {
-	int year;
-	char month;
-	char day;
-	char hour;
-	char minute;
-	char second;
-	char seed_channel;
-	unsigned long long counter;
-} NONCE;
+#define AES_ADDR __MSP430_BASEADDRESS_AES__
+#define AES_SIZE (16)
 
+void AES_Init (void);
 unsigned char AES_setCipherKey (unsigned int,const unsigned char *);
-unsigned char AES_encryptData (unsigned int,const unsigned char *,unsigned char *);
+unsigned char AES_Start_Encryption (unsigned int,const unsigned char *);
+unsigned char AES_Get_Encrypted_Data (unsigned int,unsigned char *);
 unsigned char AES_decryptDataUsingEncryptionKey (unsigned int,const unsigned char *, unsigned char *);
 
 #endif /* AES_H_ */

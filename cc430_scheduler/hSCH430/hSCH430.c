@@ -60,9 +60,9 @@ void hSCH_Init_P1_1(void)
 	P1DIR &= ~TIMER_TICK_INPUT_PIN;
 	P1REN |=  TIMER_TICK_INPUT_PIN;
 	P1OUT |=  TIMER_TICK_INPUT_PIN;
-	P1IE  |=  TIMER_TICK_INPUT_PIN;
 	P1IES |=  TIMER_TICK_INPUT_PIN;
 	P1IFG &= ~TIMER_TICK_INPUT_PIN;
+	P1IE  |=  TIMER_TICK_INPUT_PIN;
 }
 
 /*------------------------------------------------------------------*-
@@ -143,12 +143,12 @@ __interrupt void hSCH_Update(void)
 		}
 	}
 
-	P1IES ^= BIT1;  // toggle the interrupt edge,
-			        // the interrupt vector will be called
-			        // when P1.1 goes from High-to-Low as well as
-			        // Low-to-High
+	P1IES ^= TIMER_TICK_INPUT_PIN;  // toggle the interrupt edge,
+			                        // the interrupt vector will be called
+			                        // when P1.1 goes from High-to-Low as well as
+			                        // Low-to-High
 
-	P1IFG &= ~BIT1; // Clear interrupt flag
+	P1IFG &= ~TIMER_TICK_INPUT_PIN; // Clear interrupt flag
 }
 
 /*------------------------------------------------------------------*-

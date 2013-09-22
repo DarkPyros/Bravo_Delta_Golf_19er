@@ -35,6 +35,9 @@ typedef struct
 
 } sTaskH;
 
+#define CO_OP (1)
+#define PRE_EMP (0)
+
 // ------ Public function prototypes -------------------------------
 // Core scheduler functions
 

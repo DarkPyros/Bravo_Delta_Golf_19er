@@ -30,8 +30,12 @@
 void Init (void);
 void Clock_Init (void);
 void RTC_Init (void);
-void Timer_Init (void);
-void Timer_Reset (void);
+void Sandwich_Timer_Init (void);
+void LED_Init (void);
+void Flags_Init (void);
+void Flags_Pulled_Low (void);
+
+#define Sandwich_Timer_Overflow() (TA1CCTL0 & CCIFG)
 
 #endif /* INIT_H_ */
 
