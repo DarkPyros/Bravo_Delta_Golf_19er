@@ -33,7 +33,7 @@ void Init (void)
 	Flags_Init();
 
 	// Increase PMMCOREV level to 3 for proper radio operation
-	//SetVCore(3);
+	SetVCore(3);
 
 	// Setup the clock
 	Clock_Init();
@@ -198,6 +198,10 @@ void LED_Init (void)
 	LED_PORT_DIR |= LED;
 	LED_PORT_SEL &= ~LED;
 	LED_OFF;
+
+	RED_LED_PORT_DIR |= RED_LED;
+	RED_LED_PORT_SEL &= ~RED_LED;
+	RED_LED_OFF;
 }
 
 /*------------------------------------------------------------------*-
@@ -249,15 +253,15 @@ void Flags_Pulled_Low (void)
 		// Get write-access to port mapping regs
 		PMAPPWD = 0x02D52;
 		// Map Timer_TA0 output to P3.6
-		P3MAP6 = PM_TA0CCR0A;
+		P3MAP5 = PM_TA0CCR0A;
 		// Lock port mapping registers
 		PMAPPWD = 0;
 
 		// Set P3.6 as an output
 		// and enable its peripheral functions
 		// P3.6 = PM_TA0CCR0A
-		P3DIR |= BIT6;
-		P3SEL |= BIT6;
+		P3DIR |= BIT5;
+		P3SEL |= BIT5;
 
 		// Set TAIDEX to 0 for a clock divider of /1
 		TA0EX0 = TAIDEX_0;

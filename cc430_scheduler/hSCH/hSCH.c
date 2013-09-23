@@ -293,7 +293,7 @@ tByte hSCH_Get_Error_Code(void)
 -*------------------------------------------------------------------*/
 void hSCH_Go_To_Sleep()
 {
-	//__bis_SR_register( LPM0_bits + GIE ); // Enter LPM0 w/ interrupts
+	__bis_SR_register( LPM0_bits + GIE ); // Enter LPM0 w/ interrupts
 	                                 	  // enabled
 	//__no_operation();                     // For debugger
 }

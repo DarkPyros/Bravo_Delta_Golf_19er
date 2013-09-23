@@ -29,7 +29,7 @@
 // during the execution of the program
 //
 // MUST BE ADJUSTED FOR EACH NEW PROJECT
-#define hSCH_MAX_TASKS (5)
+#define hSCH_MAX_TASKS (10)
 
 // Timer tick rate in the number of microseconds between
 // timer ticks.
@@ -56,6 +56,13 @@
 #define LED_OFF P1OUT &= ~LED
 #define LED_PORT_DIR P1DIR
 #define LED_PORT_SEL P1SEL
+
+// Defines for using the LED on P3.6 for debugging
+#define RED_LED (BIT6)
+#define RED_LED_ON P3OUT |= RED_LED
+#define RED_LED_OFF P3OUT &= ~RED_LED
+#define RED_LED_PORT_DIR P3DIR
+#define RED_LED_PORT_SEL P3SEL
 
 // ------ hSCH.C ----------------------------------------
 

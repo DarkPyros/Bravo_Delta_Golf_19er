@@ -87,8 +87,12 @@ void hSCH_Start(void)
 __interrupt void hSCH_Update(void)
 {
 	tByte Index;
+	static volatile tByte Tick_Counter = 0;
 
 	//LED_ON;
+
+	if (Tick_Counter == 0)
+		RED_LED_ON;
 
 	// NOTE: calculations are in *TICKS* (not milliseconds)
 	for (Index = 0; Index < hSCH_MAX_TASKS; Index++)
@@ -134,12 +138,23 @@ __interrupt void hSCH_Update(void)
 		}
 	}
 
+	if (Tick_Counter == 0)
+		RED_LED_OFF;
+
+	if (Tick_Counter >= 79)
+		Tick_Counter = 0;
+	else
+		Tick_Counter++;
+
 	P1IES ^= TIMER_TICK_INPUT_PIN;  // toggle the interrupt edge,
 			                        // the interrupt vector will be called
 			                        // when P1.1 goes from High-to-Low as well as
 			                        // Low-to-High
 
 	P1IFG &= ~TIMER_TICK_INPUT_PIN; // Clear interrupt flag
+
+	// Exit interrupt in active mode
+	__bic_SR_register_on_exit(LPM0_bits);
 
 	//LED_OFF;
 }

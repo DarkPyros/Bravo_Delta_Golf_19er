@@ -29,14 +29,14 @@ extern ROLE Role_Flag_G;
 void main(void) {
 
     // Setup the clock and ports
-d	Init();
+	Init();
 
     // Setup the scheduler
     hSCH_Init_P1_1();
 
     // Add tasks here
     //Schedule_Tasks();
-    hSCH_Add_Task(SPI_Send_Task, 0, 79, PRE_EMP);
+    hSCH_Add_Task(SPI_Send_Task, 0, 79, CO_OP);
 
     // Start the scheduler
     hSCH_Start();
