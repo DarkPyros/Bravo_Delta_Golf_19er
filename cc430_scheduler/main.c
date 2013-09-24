@@ -36,7 +36,7 @@ void main(void) {
 
     // Add tasks here
     //Schedule_Tasks();
-    hSCH_Add_Task(SPI_Send_Task, 70, 79, CO_OP);
+    hSCH_Add_Task(SPI_Send_Task, 0, 79, CO_OP);
 
     // Start the scheduler
     hSCH_Start();
