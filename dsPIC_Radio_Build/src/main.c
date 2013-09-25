@@ -294,14 +294,15 @@ SFMInit(flashMemoryBuffer);
 	/* After initialization, wait until CC430 pulls both
      * mode flags LOW.
 	 */
-//	while( (PLAYBACK_FLAG || RECORD_FLAG) );
-
 #if defined TIMING_TEST
 TIMING_PULSE_TRIS = 0;
 TIMING_PULSE_PIN = 0;
 
 modeFlag = PLAYBACK;
 while((CheckSwitchS1()) == 0);
+
+#else
+	while( (PLAYBACK_FLAG || RECORD_FLAG) );
 #endif
 
 	/* Once the CC430 signals it is ready, transceiver is set TRUE
@@ -340,9 +341,9 @@ void modeSelect() {
 
 	int i = 0;
 
-#if defined TIMING_MODE_SELECT
-	TIMING_PULSE_PIN ^= 1;
-#endif
+//#if defined TIMING_MODE_SELECT
+//	TIMING_PULSE_PIN ^= 1;
+//#endif
 	
 #if defined TIMING_TEST
 	/* Check the switches for new operating mode */
@@ -424,12 +425,12 @@ void modeSelect() {
 	}
 	/* If operating mode has not change, do nothing*/
 	else {
-		return;
 	}
 
-#if defined TIMING_MODE_SELECT
-	TIMING_PULSE_PIN ^= 1;
-#endif	
+//#if defined TIMING_MODE_SELECT
+//	TIMING_PULSE_PIN ^= 1;
+//#endif
+
 } /* End of modeSelect() */
 
 /* Change the pre-emptive task based on a new operating mode */
@@ -538,6 +539,8 @@ void writeCodec() {
 /* Transmit an array of data using SPI */
 void writeToSPI() {
 
+	int SPITimeOut = 5000;
+	
 	#if defined TIMING_WRITE_SPI
 		TIMING_PULSE_PIN ^= 1;
 	#endif
@@ -545,7 +548,9 @@ void writeToSPI() {
 	unsigned char currentByte = 0;
 	
 	while(currentByte < PACKED_BYTES) {
-#ifndef NO_WAIT_SPI
+		TIMER_timer1Start(SPITimeOut);
+
+#ifndef NO_WAIT_FOR_SPI
 		while(!SPI1STATbits.SPITBF);
 #endif		
 		SPI1BUF = packedData[currentByte];
@@ -553,28 +558,36 @@ void writeToSPI() {
 		currentByte++;
 	}
 
-	#if defined TIMING_WRITE_SPI
+	TIMER_timer1Stop();
+
+#if defined TIMING_WRITE_SPI
 		TIMING_PULSE_PIN ^= 1;
 	#endif
 } /* End of writeToSPI() */
 
 /* Receive an array of data using SPI*/
 void readFromSPI() {
-
+	
+	int SPITimeOut = 5000;
+	
 	#if defined TIMING_READ_SPI
 		TIMING_PULSE_PIN ^= 1;
 	#endif
-
+	
 	unsigned char currentByte = 0;
 	
 	while(currentByte < PACKED_BYTES) {
-#ifndef NO_WAIT_SPI
-		while(!SPI1STATbits.SPIRBF);
+		TIMER_timer1Start();
+
+#ifndef NO_WAIT_FOR_SPI
+		while(!SPI1STATbits.SPIRBF && !_T1IF);
 #endif		
 		packedData[currentByte] = SPI1BUF;
 		
 		currentByte++;
 	}
+	
+	TIMER_timer1Stop();
 
 	#if defined TIMING_READ_SPI
 		TIMING_PULSE_PIN ^= 1;

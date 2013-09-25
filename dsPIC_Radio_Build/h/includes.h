@@ -11,5 +11,6 @@
 #include "..\h\SPIBus.h"
 #include "..\h\sch.h"
 #include "..\h\init.h"
+#include "..\h\timer.h"
 
 #endif

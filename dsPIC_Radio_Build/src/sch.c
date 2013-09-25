@@ -17,14 +17,20 @@ void SCH_UPDATE() _DCIInterrupt() {
 
 	_DCIIF = 0;
 	
-	#if defined TIMING_SCH_UPDATE
-		TIMING_PULSE_PIN ^= 1;
-	#endif
+
 	
 	/* Start sending synchronization clock pulse to other micro-controller
 	 * and updating tasks once the ready signal has been received*/
 	if(transceiverReady == TRUE) {
 		SYNC_CLK_PULSE_PIN ^= 1;
+
+#if defined TIMING_SCH_UPDATE
+	static int tickCounter = 0;
+	
+	if(tickCounter == 0) {
+		TIMING_PULSE_PIN ^= 1;
+	}
+#endif
 
 		int i;
 		
@@ -63,12 +69,20 @@ void SCH_UPDATE() _DCIInterrupt() {
 			else {
 			}
 		}
+#if defined TIMING_SCH_UPDATE
+	if(tickCounter == 0) {
+		TIMING_PULSE_PIN ^= 1;
+	}
+	if(tickCounter >= 79) {
+		tickCounter = 0;
+	}
+	else {
+		tickCounter++;
+	}
+#endif	
 	}
 	else {
 	}
-	#if defined TIMING_SCH_UPDATE
-		TIMING_PULSE_PIN ^= 1;
-	#endif	
 } /* SCH_update() */
 
 void SCH_dispatchTasks() {
