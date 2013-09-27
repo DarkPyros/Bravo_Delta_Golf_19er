@@ -34,8 +34,8 @@ void SPI_Init (void)
 	P1SEL |= BIT2 + BIT3 + BIT4;
 
 	// UCSSEL_2 - selects SMCLK as the clock source
-	// UCB0CTL0 - UCCKPH is clock phase high
-	//          - UCCKPL is clock polarity high
+	// UCB0CTL0 - UCCKPH is clock phase change then capture
+	//          - UCCKPL is clock polarity low
 	//          - UCMSB is MSB first
 	//          - UCMST is master mode
 	//          - UCMODE_0 is 3-wire SPI mode
@@ -44,7 +44,8 @@ void SPI_Init (void)
 	// UCB0BR1  - is the source clock divider high byte
 	UCB0CTL1 |= UCSWRST;
 	UCB0CTL1 |= UCSSEL_2;
-	UCB0CTL0 |= UCCKPH + UCCKPL + UCMSB + UCMST + UCMODE_0 + UCSYNC;
+	UCB0CTL0 |= UCMSB + UCMST + UCMODE_0 + UCSYNC;
+	UCB0CTL0 &= ~(UCCKPH + UCCKPL);
 	UCB0BR0 = 3;
 	UCB0BR1 = 0;
 	UCB0CTL1 &= ~(UCSWRST);
@@ -69,6 +70,9 @@ void SPI_Send (tByte const * const txData, tByte count)
 		// overflowed?
 		// This while() loop has a maximum run time of ~97 us
 		while (!(UCB0IFG & UCTXIFG) && !(Sandwich_Timer_Overflow()));
+
+		if (Sandwich_Timer_Overflow())
+			break;
 
 		// Send a byte over SPI
 		UCB0TXBUF = txData[i];

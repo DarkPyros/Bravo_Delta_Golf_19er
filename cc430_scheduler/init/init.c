@@ -176,7 +176,7 @@ void Sandwich_Timer_Init (void)
 	// Set Timer_TA1 capture compare register 1 to the current
 	// timer value plus the (TIMER_TICK_RATE - 20), which is used
 	// to give certain while() loops a maximum run time.
-	TA1CCR0 = current_time + (TIMER_TICK_RATE - 20);
+	TA1CCR0 = current_time + (TIMER_TICK_RATE - 50);
 
 	// ~(CAP) = set mode to output compare
 	// ~(CCIE) = disable the timer interrupt
