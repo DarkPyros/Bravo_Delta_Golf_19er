@@ -19,6 +19,8 @@
 #define  CRC_LQI_IDX	(PACKET_LEN+2)  // Index of appended LQI, checksum
 #define  CRC_OK			(BIT7)          // CRC_OK bit
 #define  PATABLE_VAL	(0x51)          // 0 dBm output
+#define  VCO_CHARGE_PUMP_CALIBRATION (0x30) // Value used to disable VCO charge
+											// pump calibration
 
 void Radio_Init (void);
 void Radio_Read_RX_FIFO(tByte * const, tByte);

@@ -89,9 +89,15 @@ void Radio_Init (void)
 	//PMMCTL0_L |= PMMHPMRE_L;
 	//PMMCTL0_H = 0x00;
 
+	ResetRadioCore();
+
 	WriteRfSettings(&rfSettings);
 
 	WriteSinglePATable(PATABLE_VAL);
+
+	Strobe(RF_SCAL);
+
+
 }
 
 void Radio_Read_RX_FIFO(tByte * const RX_Buffer, tByte size)
@@ -114,4 +120,37 @@ void Radio_Read_RX_FIFO(tByte * const RX_Buffer, tByte size)
 			Error_code_G = ERROR_RADIO_RX_CRC_BAD;
 		}
 	}
+}
+
+void Transmit(unsigned char *buffer, unsigned char length)
+{
+  //RF1AIES |= BIT9;
+  //RF1AIFG &= ~BIT9;                         // Clear pending interrupts
+  //RF1AIE |= BIT9;                           // Enable TX end-of-packet interrupt
+
+  WriteBurstReg(RF_TXFIFOWR, buffer, length);
+
+  Strobe( RF_STX );                         // Strobe STX
+}
+
+void ReceiveOn(void)
+{
+  //RF1AIES |= BIT9;                          // Falling edge of RFIFG9
+  //RF1AIFG &= ~BIT9;                         // Clear a pending interrupt
+  //RF1AIE  |= BIT9;                          // Enable the interrupt
+
+  // Radio is in IDLE following a TX, so strobe SRX to enter Receive Mode
+  Strobe( RF_SRX );
+}
+
+void ReceiveOff(void)
+{
+  //RF1AIE &= ~BIT9;                          // Disable RX interrupts
+  //RF1AIFG &= ~BIT9;                         // Clear pending IFG
+
+  // It is possible that ReceiveOff is called while radio is receiving a packet.
+  // Therefore, it is necessary to flush the RX FIFO after issuing IDLE strobe
+  // such that the RXFIFO is empty prior to receiving a packet.
+  Strobe( RF_SIDLE );
+  Strobe( RF_SFRX  );
 }
