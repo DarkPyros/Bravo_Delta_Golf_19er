@@ -17,23 +17,29 @@ void SCH_UPDATE() _DCIInterrupt() {
 
 	_DCIIF = 0;
 	
-
-	
+	int i;
+		
 	/* Start sending synchronization clock pulse to other micro-controller
 	 * and updating tasks once the ready signal has been received*/
 	if(transceiverReady == TRUE) {
+static int tickCounter = 0;
+if(tickCounter == 0 )//&& currentMode == RECORD)	
 		SYNC_CLK_PULSE_PIN ^= 1;
 
-#if defined TIMING_SCH_UPDATE
-	static int tickCounter = 0;
-	
-	if(tickCounter == 0) {
-		TIMING_PULSE_PIN ^= 1;
-	}
-#endif
+if(tickCounter >= 79) 
+	tickCounter = 0;
 
-		int i;
+else 
+	tickCounter++;
+
+		#if defined TIMING_SCH_UPDATE
+		static int tickCounter = 0;
 		
+		if(tickCounter == 0) {
+			TIMING_PULSE_PIN ^= 1;
+		}
+		#endif
+
 		for(i=0; i < SCH_MAX_TASKS; i++){
 			
 			/* Check for task at this position */
@@ -69,17 +75,17 @@ void SCH_UPDATE() _DCIInterrupt() {
 			else {
 			}
 		}
-#if defined TIMING_SCH_UPDATE
-	if(tickCounter == 0) {
-		TIMING_PULSE_PIN ^= 1;
-	}
-	if(tickCounter >= 79) {
-		tickCounter = 0;
-	}
-	else {
-		tickCounter++;
-	}
-#endif	
+		#if defined TIMING_SCH_UPDATE
+		if(tickCounter == 0) {
+			TIMING_PULSE_PIN ^= 1;
+		}
+		if(tickCounter >= 79) {
+			tickCounter = 0;
+		}
+		else {
+			tickCounter++;
+		}
+		#endif	
 	}
 	else {
 	}
@@ -106,6 +112,9 @@ void SCH_dispatchTasks() {
 		else {
 		}
 	}
+	
+	/* Scheduler enters idle mode */
+	SCH_goToSleep();	
 } /* SCH_dispatchTasks() */
 
 int SCH_addTask(void (*pFunction)(), int delay, int period, int co_op) {
@@ -140,8 +149,18 @@ void SCH_deleteTask(int task_index) {
 		SCH_tasks[task_index].RunMe = 0;
 	}
 	else {
-		return;
 	}
 } /* SCH_deleteTask() */
 
+void SCH_start() {
+	/* The scheduler interrupt is running from reset to allow communication
+	 * with WM8510. Start the scheduler program by setting transceiverRead 
+	 * to true */
+	transceiverReady = TRUE;
+} /* End of SCH_start() */
+
+void SCH_goToSleep() {
+	/* Macro for placing dsPIC CPU in idle mode */
+//	Idle();
+} /* End of SCH_goToSleep() */
 /******* End of File *******/

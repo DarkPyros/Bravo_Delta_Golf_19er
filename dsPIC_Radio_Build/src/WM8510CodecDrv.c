@@ -64,10 +64,6 @@ void WM8510Stop(WM8510Handle * pHandle)
 
 void WM8510Read(WM8510Handle * pHandle, int * data, int size)
 {
-	#if defined TIMING_WM_READ
-		TIMING_PULSE_PIN ^= 1;
-	#endif
-
 	/* The buffer indicator bit in the status register determines which	
 	 * which buffer can be read. If flag is 0 then buffer 2 should be read
 	 * else buffer should be read. */
@@ -104,10 +100,6 @@ void WM8510Read(WM8510Handle * pHandle, int * data, int size)
 	__asm__ volatile("disi #0x4"); /* disable interrupts */
 	pHandle->statusFlag |= WM8510DRV_SET_READ_BUSY;
 	__asm__ volatile("disi #0x0"); /* enable interrupts */
-
-	#if defined TIMING_WM_READ
-	TIMING_PULSE_PIN ^= 1;
-	#endif
 }
 	
 int WM8510IsWriteBusy(WM8510Handle *pHandle)
@@ -122,11 +114,6 @@ int  WM8510IsReadBusy(WM8510Handle *pHandle)
 
 void WM8510Write(WM8510Handle * pHandle, int * data, int size)
 {
-
-	#if defined TIMING_WM_WRITE
-		TIMING_PULSE_PIN ^= 1;
-	#endif
-
 	/* The buffer indicator bit in the status register determines which	
 	 * which buffer can be written to. If flag is 0 then buffer 2 should be 
 	 * written to since the driver is writing buffer 1 to the output. */
@@ -166,10 +153,6 @@ void WM8510Write(WM8510Handle * pHandle, int * data, int size)
 	__asm__ volatile("disi #0x4"); /* disable interrupts */
 	pHandle->statusFlag |= WM8510DRV_SET_WRITE_BUSY;
 	__asm__ volatile("disi #0x0"); /* enable interrupts */
-
-	#if defined TIMING_WM_WRITE
-		TIMING_PULSE_PIN ^= 1;
-	#endif
 }
 
 void WM8510RecordSampling() {

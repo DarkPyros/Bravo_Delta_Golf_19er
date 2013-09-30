@@ -31,7 +31,7 @@ void SPI_SlaveInit(){
 	SPI1CON1bits.PPRE = 0;	//Primary Prescale not set for SLAVE Mode
 	SPI1CON1bits.SPRE = 0;	//Secondary Prescale not set for SLAVE Mode
 	SPI1CON1bits.MSTEN = 0;	//MASTER Mode Enable bit not set
-	SPI1CON1bits.CKP = 1;	//Idle state for clock is a high level; active state is a low level
+	SPI1CON1bits.CKP = 0;	//Idle state for clock is a high level; active state is a low level
 	SPI1CON1bits.SSEN = 0;	//No Slave Select Enable bit used
 	SPI1CON1bits.CKE = 0;	//Output data changes on transition from idle to active clock state
 	SPI1CON1bits.SMP = 0;	//Sample Phase bit not set for SLAVE Mode

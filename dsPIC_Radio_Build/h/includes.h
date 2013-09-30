@@ -12,5 +12,6 @@
 #include "..\h\sch.h"
 #include "..\h\init.h"
 #include "..\h\timer.h"
+#include "..\h\tasks.h"
 
 #endif
