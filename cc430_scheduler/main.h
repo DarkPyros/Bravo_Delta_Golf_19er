@@ -32,8 +32,13 @@
 #define hSCH_MAX_TASKS (10)
 
 // Timer tick rate in the number of microseconds between
-// timer ticks.
-#define TIMER_TICK_RATE 125
+// timer ticks. This is used primarily for sandwich
+// timer delays.
+#define TIMER_TICK_RATE (125)
+
+// Number of timer ticks per 10 ms frequency hop. This is
+// also the number of ticks per 10 ms audio frame.
+#define TICKS_PER_FRAME (80)
 
 // Timer tick input pin
 // The pin which receives the timer tick signal is P1.6
@@ -41,6 +46,11 @@
 
 // Audio frame size in bytes
 #define AUDIO_FRAME_SIZE (20)
+
+// UART debugging defines
+//#define TEXT_BINARY
+#define TEXT_HEX
+//#define DEBUG
 
 // Defines for setting the flag output port and pins
 // for signaling the dsPIC as to what to do next.

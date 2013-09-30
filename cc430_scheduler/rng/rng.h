@@ -26,8 +26,6 @@ typedef struct S_NONCE {
 } tNONCE;
 
 void RNG_Init (void);
-void RNG_Generate (void);
-void RNG_Harvest (void);
 tByte RNG_Get_Rand (void);
 tByte * RNG_Get_Nonce (void);
 void Nonce_Init (void);

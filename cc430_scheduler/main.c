@@ -7,8 +7,8 @@
   Project to use a Texas Instruments CC430 as a frequency hopping
   radio that transmits and receives encrypted voice data. The project
   uses a hybrid scheduler with only one pre-emptive task allowed. The
-  timer ticks are provided by a DsPIC chip at a rate of every 125 us.
-  The DsPIC also handles voice sampling and playback, as well as voice
+  timer ticks are provided by a dsPIC chip at a rate of every 125 us.
+  The dsPIC also handles voice sampling and playback, as well as voice
   data compression and decompression.
 
   *** All timing is in TICKS (not milliseconds) ***
@@ -35,8 +35,7 @@ void main(void) {
     hSCH_Init_P1_1();
 
     // Add tasks here
-    //Schedule_Tasks();
-    hSCH_Add_Task(SPI_Send_Task, 70, 79, CO_OP);
+    Schedule_Tasks();
 
     // Start the scheduler
     hSCH_Start();

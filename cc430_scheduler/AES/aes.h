@@ -28,9 +28,8 @@
 #define AES_SIZE (16)
 
 void AES_Init (void);
-unsigned char AES_setCipherKey (unsigned int,const unsigned char *);
-unsigned char AES_Start_Encryption (unsigned int,const unsigned char *);
-unsigned char AES_Get_Encrypted_Data (unsigned int,unsigned char *);
-unsigned char AES_decryptDataUsingEncryptionKey (unsigned int,const unsigned char *, unsigned char *);
+tByte AES_setCipherKey (tWord const,tByte const * const);
+tByte AES_Encrypt_Data (tWord const,tByte const * const,tByte * const);
+tByte AES_decryptDataUsingEncryptionKey (tWord const,tByte const * const, tByte * const);
 
 #endif /* AES_H_ */
