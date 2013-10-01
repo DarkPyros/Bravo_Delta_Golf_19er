@@ -41,8 +41,8 @@
 #define TICKS_PER_FRAME (80)
 
 // Timer tick input pin
-// The pin which receives the timer tick signal is P1.6
-#define TIMER_TICK_INPUT_PIN (BIT6)
+// The pin which receives the timer tick signal is P1.7
+#define TIMER_TICK_INPUT_PIN (BIT7)
 
 // Audio frame size in bytes
 #define AUDIO_FRAME_SIZE (20)

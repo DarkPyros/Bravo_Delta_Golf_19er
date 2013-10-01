@@ -12,6 +12,7 @@
 #include "./rng/rng.h"
 #include "./radio/radio.h"
 #include "./AES/aes.h"
+#include "./UART/uart.h"
 
 MODE Mode_Flag_G = RECEIVE;
 SYNC Sync_Flag_G = SYNC_LOST;
@@ -37,20 +38,23 @@ tByte AES_Encrypt_Buffer[AES_SIZE] = { 0x00, 0x00, 0x00, 0x00,
 									   0x00, 0x00, 0x00, 0x00,
 									   0x00, 0x00, 0x00, 0x00 };
 
-tByte Data_Packet_Buffer[AES_SIZE * 2] = { 0x00, 0x00, 0x00, 0x00,
-										   0x00, 0x00, 0x00, 0x00,
-										   0x00, 0x00, 0x00, 0x00,
-										   0x00, 0x00, 0x00, 0x00,
-										   0x00, 0x00, 0x00, 0x00,
-										   0x00, 0x00, 0x00, 0x00,
-										   0x00, 0x00, 0x00, 0x00,
-										   0x00, 0x00, 0x00, 0x00 };
+tByte Radio_Data_Packet_Buffer[AES_SIZE * 2] = { 0x00, 0x00, 0x00, 0x00,
+										         0x00, 0x00, 0x00, 0x00,
+										         0x00, 0x00, 0x00, 0x00,
+										         0x00, 0x00, 0x00, 0x00,
+										         0x00, 0x00, 0x00, 0x00,
+										         0x00, 0x00, 0x00, 0x00,
+										         0x00, 0x00, 0x00, 0x00,
+										         0x00, 0x00, 0x00, 0x00 };
+
+extern tByte HexText[AES_SIZE * 4];
 
 void Schedule_Tasks (void)
 {
 	//hSCH_Add_Task(Change_Channel_Task, 0, 80, PRE_EMP);
 	//hSCH_Add_Task(Get_Next_Channel_Task, RNG_GET_RAND_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-	hSCH_Add_Task(Encrypt_Data_Task, ENCRYPT_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+	hSCH_Add_Task(Encrypt_Data_Task, ENCRYPT_DATA_TASK_DELAY, 0, CO_OP);
+	hSCH_Add_Task(UART_Send_Task, UART_SEND_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 	//hSCH_Add_Task(Start_Synchronization_Task, 2, 80, CO_OP);
 
 	if (Role_Flag_G == SLAVE)
@@ -116,8 +120,8 @@ void Encrypt_Data_Task (void)
 		AES_Encrypt_Buffer[i] = SPI_Buffer[i];
 	}
 
-	AES_Encrypt_Data(AES_ADDR, AES_Encrypt_Buffer, Data_Packet_Buffer);
-
+	AES_Encrypt_Data(AES_ADDR, AES_Encrypt_Buffer, Radio_Data_Packet_Buffer);
+/*
 	for (i = 0; i < (sizeof(SPI_Buffer) - AES_SIZE); i++)
 	{
 		AES_Encrypt_Buffer[i] = SPI_Buffer[i];
@@ -128,8 +132,8 @@ void Encrypt_Data_Task (void)
 		AES_Encrypt_Buffer[i] = 0;
 	}
 
-	AES_Encrypt_Data(AES_ADDR, AES_Encrypt_Buffer, &(Data_Packet_Buffer[AES_SIZE]));
-
+	AES_Encrypt_Data(AES_ADDR, AES_Encrypt_Buffer, &(Radio_Data_Packet_Buffer[AES_SIZE]));
+*/
 	RED_LED_OFF;
 }
 
@@ -145,6 +149,34 @@ void SPI_Receive_Task (void)
 	//LED_ON;
 	SPI_Receive(SPI_Buffer, AUDIO_FRAME_SIZE);
 	//LED_OFF;
+}
+
+void UART_Send_Task (void)
+{
+	static tByte UART_Index = 0;
+	static tByte UART_Convert = FALSE;
+
+	RED_LED_ON;
+
+	if ((UART_Index == 0) && (UART_Convert == FALSE))
+	{
+		UART_Convert = TRUE;
+		Convert_To_ASCII_Hex(Radio_Data_Packet_Buffer, HexText, sizeof(Radio_Data_Packet_Buffer));
+		Byte_Reverse(HexText, sizeof(HexText));
+	}
+
+	if (UART_TX_Busy() == FALSE)
+	{
+		UART_TX(HexText[UART_Index++]);
+
+		if (UART_Index >= sizeof(Radio_Data_Packet_Buffer))
+		{
+			UART_Index = 0;
+			UART_Convert = FALSE;
+		}
+	}
+
+	RED_LED_OFF;
 }
 
 

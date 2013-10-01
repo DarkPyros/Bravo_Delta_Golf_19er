@@ -16,6 +16,7 @@
 #include "../radio/radio.h"
 #include "../spi/spi.h"
 #include "../rng/rng.h"
+#include "../UART/uart.h"
 
 /*------------------------------------------------------------------*-
 
@@ -61,6 +62,9 @@ void Init (void)
 
 	// Setup random number generator
 	RNG_Init();
+
+	// Setup the UART module
+	UART_Init();
 }
 
 
@@ -92,6 +96,7 @@ void Clock_Init (void)
 
 	#ifdef DEBUG_CLOCK_OUTPUT
 		PMAPPWD = 0x02D52;                        // Get write-access to port mapping regs
+		PMAPCTL = PMAPRECFG;					  // Enable further port remaps
 		P2MAP0 = PM_ACLK;                         // Map ACLK output to P2.0
 		P2MAP2 = PM_MCLK;                         // Map MCLK output to P2.2
 		P2MAP4 = PM_SMCLK;                        // Map SMCLK output to P2.4
@@ -252,7 +257,9 @@ void Flags_Pulled_Low (void)
 	{
 		// Get write-access to port mapping regs
 		PMAPPWD = 0x02D52;
-		// Map Timer_TA0 output to P3.6
+		// Enable further port remaps
+		PMAPCTL = PMAPRECFG;
+		// Map Timer_TA0 output to P3.5
 		P3MAP5 = PM_TA0CCR0A;
 		// Lock port mapping registers
 		PMAPPWD = 0;
