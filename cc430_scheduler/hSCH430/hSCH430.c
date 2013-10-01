@@ -22,7 +22,7 @@
   Must call this function before using the scheduler.
 
 -*------------------------------------------------------------------*/
-void hSCH_Init_P1_1(void)
+void hSCH_Init(void)
 {
 	tByte i;
 

@@ -23,10 +23,10 @@ ROLE Role_Flag_G = MASTER;
 //static tByte Next_Channel = 0;
 tByte Next_Channel = 0;
 
-static tByte SPI_Buffer[AUDIO_FRAME_SIZE] = { 0xA5, 0xA5, 0xA5, 0xA5, 0xA5,
-											  0xA5, 0xA5, 0xA5, 0xA5, 0xA5,
-											  0xA5, 0xA5, 0xA5, 0xA5, 0xA5,
-											  0xA5, 0xA5, 0xA5, 0xA5, 0xA5 };
+static tByte SPI_Buffer[AUDIO_FRAME_SIZE] = { 0x6b, 0xc1, 0xbe, 0xe2, 0x2e,
+											  0x40, 0x9f, 0x96, 0xe9, 0x3d,
+											  0x7e, 0x11, 0x73, 0x93, 0x17,
+											  0x2a, 0xA5, 0xA5, 0xA5, 0xA5 };
 
 tByte Sync_Info[AES_SIZE] = { 0x00, 0x00, 0x00, 0x00,
 							  0x00, 0x00, 0x00, 0x00,
@@ -53,7 +53,7 @@ void Schedule_Tasks (void)
 {
 	//hSCH_Add_Task(Change_Channel_Task, 0, 80, PRE_EMP);
 	//hSCH_Add_Task(Get_Next_Channel_Task, RNG_GET_RAND_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-	hSCH_Add_Task(Encrypt_Data_Task, ENCRYPT_DATA_TASK_DELAY, 0, CO_OP);
+	hSCH_Add_Task(Encrypt_Data_Task, ENCRYPT_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 	hSCH_Add_Task(UART_Send_Task, UART_SEND_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 	//hSCH_Add_Task(Start_Synchronization_Task, 2, 80, CO_OP);
 
@@ -121,7 +121,7 @@ void Encrypt_Data_Task (void)
 	}
 
 	AES_Encrypt_Data(AES_ADDR, AES_Encrypt_Buffer, Radio_Data_Packet_Buffer);
-/*
+
 	for (i = 0; i < (sizeof(SPI_Buffer) - AES_SIZE); i++)
 	{
 		AES_Encrypt_Buffer[i] = SPI_Buffer[i];
@@ -129,11 +129,11 @@ void Encrypt_Data_Task (void)
 
 	for (i = (sizeof(SPI_Buffer) - AES_SIZE); i < AES_SIZE; i++)
 	{
-		AES_Encrypt_Buffer[i] = 0;
+		AES_Encrypt_Buffer[i] = 0xAA;
 	}
 
-	AES_Encrypt_Data(AES_ADDR, AES_Encrypt_Buffer, &(Radio_Data_Packet_Buffer[AES_SIZE]));
-*/
+	AES_Encrypt_Data(AES_ADDR, AES_Encrypt_Buffer, (tByte *) &(Radio_Data_Packet_Buffer[AES_SIZE]));
+
 	RED_LED_OFF;
 }
 
@@ -162,14 +162,14 @@ void UART_Send_Task (void)
 	{
 		UART_Convert = TRUE;
 		Convert_To_ASCII_Hex(Radio_Data_Packet_Buffer, HexText, sizeof(Radio_Data_Packet_Buffer));
-		Byte_Reverse(HexText, sizeof(HexText));
+		//Byte_Reverse(HexText, sizeof(HexText));
 	}
 
 	if (UART_TX_Busy() == FALSE)
 	{
 		UART_TX(HexText[UART_Index++]);
 
-		if (UART_Index >= sizeof(Radio_Data_Packet_Buffer))
+		if (UART_Index >= sizeof(HexText))
 		{
 			UART_Index = 0;
 			UART_Convert = FALSE;

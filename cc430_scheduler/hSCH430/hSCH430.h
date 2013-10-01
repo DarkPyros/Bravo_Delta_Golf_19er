@@ -14,7 +14,7 @@
 
 // ------ Public function prototypes -------------------------------
 
-void hSCH_Init_P1_1(void);
+void hSCH_Init(void);
 void hSCH_Start(void);
 
 // hSCH430.C also includes the Port 1 ISR setup as

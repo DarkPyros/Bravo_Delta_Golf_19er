@@ -32,7 +32,7 @@ void main(void) {
 	Init();
 
     // Setup the scheduler
-    hSCH_Init_P1_1();
+    hSCH_Init();
 
     // Add tasks here
     Schedule_Tasks();

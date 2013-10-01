@@ -20,7 +20,7 @@ tByte AES_setCipherKey (tWord const baseAddress,
 	tByte i = 0;
 	tWord tempVariable = 0;
 
-	// Wait until AES accelerator is busy
+	// Wait until AES accelerator is not busy
 	while(AESBUSY == (HWREG(baseAddress + OFS_AESASTAT) & AESBUSY) );
 
 	for (i = 0; i < 16; i = i + 2)
@@ -44,6 +44,9 @@ tByte AES_Encrypt_Data (tWord const baseAddress,
 	tByte i;
 	tWord tempData = 0;
 	tWord tempVariable = 0;
+
+	// Wait until AES accelerator is not busy
+	while(AESBUSY == (HWREG(baseAddress + OFS_AESASTAT) & AESBUSY) );
 
 	// Set module to encrypt mode
 	HWREG(baseAddress + OFS_AESACTL0) &= ~AESOP_3;
@@ -109,7 +112,7 @@ tByte AES_decryptDataUsingEncryptionKey (tWord const baseAddress,
 	{
 		tempData = HWREG(baseAddress + OFS_AESADOUT);
 		*(decryptedData + i) = (tByte)tempData;
-		*(decryptedData +i+1) = (tByte)(tempData >> 8);
+		*(decryptedData + i + 1) = (tByte)(tempData >> 8);
 	}
 
 	return STATUS_SUCCESS;

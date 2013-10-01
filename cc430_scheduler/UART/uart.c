@@ -101,15 +101,15 @@ void Convert_To_ASCII_Hex (tByte const * const input, tByte * const output, tByt
 
 	for (index = 0; index < size; index++)
 	{
-		if ((input[index] & 0x0F) > 9)
-		   output[index << 1] = (input[index] & 0x0F) + 0x37;
-		else
-		   output[index << 1] = (input[index] & 0x0F) + 0x30;
-
 		if (((input[index] >> 4) & 0x0F) > 9)
-           output[(index << 1) + 1] = ((input[index] >> 4) & 0x0F) + 0x37;
+			output[index << 1] = ((input[index] >> 4) & 0x0F) + 0x37;
 		else
-		   output[(index << 1) + 1] = ((input[index] >> 4) & 0x0F) + 0x30;
+			output[index << 1] = ((input[index] >> 4) & 0x0F) + 0x30;
+
+		if ((input[index] & 0x0F) > 9)
+			output[(index << 1) + 1]= (input[index] & 0x0F) + 0x37;
+		else
+			output[(index << 1) + 1] = (input[index] & 0x0F) + 0x30;
 	}
 }
 
@@ -117,7 +117,7 @@ void Byte_Reverse (tByte * const data, tByte const size)
 {
    tWord index = 0;
 
-   tByte * const temp = (tByte *)malloc(size);
+   tByte * temp = (tByte *)malloc(size);
 
    for (index = 0; index < size; index += 2)
    {

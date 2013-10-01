@@ -116,8 +116,8 @@ void Clock_Init (void)
 
 	__bis_SR_register(SCG0);                  // Disable the FLL control loop
 	UCSCTL0 = 0x0000;                         // Set lowest possible DCOx, MODx
-	UCSCTL1 = DCORSEL_7;                      // Select DCO range for 20MHz operation
-	UCSCTL2 = FLLD_0 + 2;                     // Set DCO Multiplier for 20MHz
+	UCSCTL1 = DCORSEL_7;                      // Select DCO range for 19.5MHz operation
+	UCSCTL2 = FLLD_0 + 2;                     // Set DCO Multiplier for 19.5MHz
 	                                          // ((N + 1) * FLLRef) / FLLDiv = Fdco
 	                                          // ((2 + 1) * 6.5 MHz) / 1 = 19.5MHz
 	                                          // Set FLL Div = fDCOCLK/1
@@ -179,7 +179,7 @@ void Sandwich_Timer_Init (void)
 	} while (current_time != TA1R);
 
 	// Set Timer_TA1 capture compare register 1 to the current
-	// timer value plus the (TIMER_TICK_RATE - 20), which is used
+	// timer value plus the (TIMER_TICK_RATE - 50), which is used
 	// to give certain while() loops a maximum run time.
 	TA1CCR0 = current_time + (TIMER_TICK_RATE - 50);
 
