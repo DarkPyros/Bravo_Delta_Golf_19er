@@ -22,22 +22,17 @@ void SCH_UPDATE() _DCIInterrupt() {
 	/* Start sending synchronization clock pulse to other micro-controller
 	 * and updating tasks once the ready signal has been received*/
 	if(transceiverReady == TRUE) {
-static int tickCounter = 0;
-if(tickCounter == 0 )//&& currentMode == RECORD)	
 		SYNC_CLK_PULSE_PIN ^= 1;
-
-if(tickCounter >= 79) 
-	tickCounter = 0;
-
-else 
-	tickCounter++;
-
-		#if defined TIMING_SCH_UPDATE
-		static int tickCounter = 0;
 		
-		if(tickCounter == 0) {
+		/* 12.4 microsecond sandwich delay */
+		TIMER_timer1Start(310);
+		
+		#if defined TIMING_SCH_UPDATE
+//		static int tickCounter = 0;
+		
+//		if(tickCounter == 0) {
 			TIMING_PULSE_PIN ^= 1;
-		}
+//		}
 		#endif
 
 		for(i=0; i < SCH_MAX_TASKS; i++){
@@ -75,17 +70,22 @@ else
 			else {
 			}
 		}
+		
+		/* Wait for timeout and disable/clear timer */
+		while(!_T1IF);
+		TIMER_timer1Stop();
+	
 		#if defined TIMING_SCH_UPDATE
-		if(tickCounter == 0) {
+//		if(tickCounter == 0) {
 			TIMING_PULSE_PIN ^= 1;
-		}
+/*		}
 		if(tickCounter >= 79) {
 			tickCounter = 0;
 		}
 		else {
 			tickCounter++;
 		}
-		#endif	
+*/		#endif
 	}
 	else {
 	}

@@ -66,8 +66,8 @@ void TASKS_modeSelect() {
 
 	int i = 0;
 	
-	/* 28.4 microsecond timeout */
-	TIMER_timer1Start(592);
+	/* 29 microsecond sandwich delay */
+	TIMER_timer1Start(TIMER_DELAY_MODE_SELECT);
 //	TIMING_PULSE_PIN ^= 1;
 //	while(!_T1IF);
 //	TIMING_PULSE_PIN ^= 1;
@@ -165,8 +165,8 @@ void TASKS_modeSelect() {
 	}
 
 	/* Wait for timeout and disable/clear timer */
-//	while(!_T1IF);
-//	TIMER_timer1Stop();
+	while(!_T1IF);
+	TIMER_timer1Stop();
 	
 	#if defined TIMING_MODE_SELECT
 	TIMING_PULSE_PIN ^= 1;
@@ -305,15 +305,14 @@ void TASKS_writeCodec() {
 /* Transmit an array of data using SPI */
 void TASKS_writeToSPI() {
 
-	int SPITimeOut = 5000;
-	
 	#if defined TIMING_WRITE_SPI
 	TIMING_PULSE_PIN ^= 1;
 	#endif
 
 	unsigned char currentByte = 0;
 	
-	TIMER_timer1Start(SPITimeOut);
+	/* 90 microsecond SPI timeout */
+	TIMER_timer1Start(TIMER_TIMEOUT_SPI);
 
 	while(currentByte < PACKED_BYTES) {
 
@@ -325,6 +324,7 @@ void TASKS_writeToSPI() {
 		currentByte++;
 	}
 
+	/* disable/clear timer */
 	TIMER_timer1Stop();
 
 	#if defined TIMING_WRITE_SPI
@@ -335,15 +335,14 @@ void TASKS_writeToSPI() {
 /* Receive an array of data using SPI*/
 void TASKS_readFromSPI() {
 	
-	int SPITimeOut = 5000;
-	
 	#if defined TIMING_WRITE_SPI
 	TIMING_PULSE_PIN ^= 1;
 	#endif
 
 	unsigned char currentByte = 0;
 	
-	TIMER_timer1Start(SPITimeOut);
+	/* 90 microsecond SPI timeout */
+	TIMER_timer1Start(TIMER_TIMEOUT_SPI);
 
 	while(currentByte < PACKED_BYTES) {
 
@@ -355,6 +354,7 @@ void TASKS_readFromSPI() {
 		currentByte++;
 	}
 	
+	/* disable/clear timer */
 	TIMER_timer1Stop();
 
 	#if defined TIMING_READ_SPI

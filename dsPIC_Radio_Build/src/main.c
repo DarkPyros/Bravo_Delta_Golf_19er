@@ -234,11 +234,6 @@ int main(void) {
 	 */
 	SCH_addTask(WM8510IdleSampling, 1, 0, CO_OP);
 	SCH_addTask(TASKS_modeSelect, DELAY_MODE_SELECT, FRAME_PERIOD, CO_OP);
-//	SCH_addTask(TASKS_readFromSPI, 70, FRAME_PERIOD, CO_OP);
-//	SCH_addTask(WM8510PlaybackSampling, 79, 0, PRE_EMPTIVE);
-//	SCH_addTask(TASKS_playbackSpeechSegment, 1, FRAME_PERIOD, CO_OP);
-//	SCH_addTask(TASKS_decodeData, 2, FRAME_PERIOD, CO_OP);
-//	SCH_addTask(TASKS_writeCodec, 32, FRAME_PERIOD, CO_OP);
 	
 	/* After initialization, wait until CC430 pulls both
      * mode flags LOW.

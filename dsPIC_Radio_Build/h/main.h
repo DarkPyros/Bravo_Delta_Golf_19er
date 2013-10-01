@@ -15,9 +15,9 @@
 
 #define 	TIMING_TEST
 //#define 	TIMING_SCH_UPDATE
-#define 	TIMING_MODE_SELECT
-//#define 	TIMING_ENCODE_DATA
-//#define 	TIMING_DECODE_DATA
+//#define 	TIMING_MODE_SELECT
+#define 	TIMING_ENCODE_DATA
+#define 	TIMING_DECODE_DATA
 //#define	TIMING_WRITE_SPI
 //#define 	TIMING_READ_SPI
 //#define 	TIMING_READ_CODEC
