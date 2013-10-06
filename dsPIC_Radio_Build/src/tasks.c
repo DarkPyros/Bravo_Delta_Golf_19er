@@ -119,7 +119,7 @@ void TASKS_modeSelect() {
 			}
 
 			//SCH_addTask(TASKS_readFromSPI, DELAY_READ_SPI, 	  FRAME_PERIOD, CO_OP);
-			SCH_addTask(TASKS_playbackSpeechSegment, (DELAY_DECODE_DATA - 2), FRAME_PERIOD, CO_OP);
+			SCH_addTask(TASKS_playbackSpeechSegment, DELAY_READ_SPI, FRAME_PERIOD, CO_OP);
 			SCH_addTask(TASKS_decodeData,  DELAY_DECODE_DATA, FRAME_PERIOD, CO_OP);
 			SCH_addTask(TASKS_writeCodec,  DELAY_WRITE_CODEC, FRAME_PERIOD, CO_OP);
 		}	
@@ -138,7 +138,7 @@ void TASKS_modeSelect() {
 			SCH_addTask(TASKS_readCodec,  DELAY_READ_CODEC,  FRAME_PERIOD, CO_OP);
 			SCH_addTask(TASKS_encodeData, DELAY_ENCODE_DATA, FRAME_PERIOD, CO_OP);
 			//SCH_addTask(TASKS_writeToSPI, DELAY_WRITE_SPI,   FRAME_PERIOD, CO_OP);
-			SCH_addTask(TASKS_recordSpeechSegment, (DELAY_ENCODE_DATA + 26), FRAME_PERIOD, CO_OP);
+			SCH_addTask(TASKS_recordSpeechSegment, DELAY_WRITE_SPI, FRAME_PERIOD, CO_OP);
 		}	
 		else {
 			/* Toggle indicator LEDs. */
@@ -165,7 +165,7 @@ void TASKS_modeSelect() {
 	}
 
 	/* Wait for timeout and disable/clear timer */
-	while(!_T1IF);
+//	while(!_T1IF);
 	TIMER_timer1Stop();
 	
 	#if defined TIMING_MODE_SELECT
@@ -209,31 +209,22 @@ void TASKS_encodeData() {
 		TIMING_PULSE_PIN ^= 1;
 	#endif
 
-	/*Obtain Audio Samples
-	while(WM8510IsReadBusy(codecHandle));
-	*/
-	
-	/* Wait till the codec is ready with a new frame */	
-	if(WM8510IsReadBusy(codecHandle) == FALSE) {
-		
-		/* Scale samples from 16-bit to 14-bit */
-		for(i = 0; i < G726A_FRAME_SIZE; i ++)
-		{
-			/* Not necessary if its known that input is 14 bits or less. */	
-			rawSamples[i] = rawSamples[i] >> 2;
-		}
-
-		/* Encode samples*/
-		G726AEncode(encoder,rawSamples,encodedSamples);
-		
-		/* Compresses 80 encoded samples into 20 bytes of data prior to transmission */
-		G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
-		
+	/* Scale samples from 16-bit to 14-bit */
+	for(i = 0; i < G726A_FRAME_SIZE; i ++)
+	{
+		/* Not necessary if its known that input is 14 bits or less. */	
+		rawSamples[i] = rawSamples[i] >> 2;
 	}
 
-#if defined TIMING_ENCODE_DATA
+	/* Encode samples*/
+	G726AEncode(encoder,rawSamples,encodedSamples);
+	
+	/* Compresses 80 encoded samples into 20 bytes of data prior to transmission */
+	G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
+	
+	#if defined TIMING_ENCODE_DATA
 	TIMING_PULSE_PIN ^= 1;
-#endif
+	#endif
 } /* End of encodeData() */
 
 /* Obtain audio samples from codec */
@@ -242,8 +233,21 @@ void TASKS_readCodec() {
 	TIMING_PULSE_PIN ^= 1;
 	#endif
 
-	WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);
-
+	/* Obtain audio samples
+	while(WM8510IsReadBusy(codecHandle));
+	*/
+	
+	/* Only read if WM8510 codec has recorded a new frame */	
+	if(WM8510IsReadBusy(codecHandle) == FALSE) {
+		WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);
+	}
+	/* If WM8510 is busy, set RED LED until SW2 is pressed */
+	else {
+		RED_LED	= SASK_LED_ON;
+		while((CheckSwitchS2()) == 0);
+		RED_LED	= SASK_LED_OFF;
+	}
+	
 	#if defined TIMING_READ_CODEC
 	TIMING_PULSE_PIN ^= 1;
 	#endif
@@ -258,34 +262,24 @@ void TASKS_decodeData() {
 		TIMING_PULSE_PIN ^= 1;
 	#endif
 	
-	/* Wait till the codec is available for a new frame	
-	while(WM8510IsWriteBusy(codecHandle));	
-	*/
-	
-	/* Wait till the codec is available for a new frame */
-	if(WM8510IsWriteBusy(codecHandle) == FALSE) {
-
 #ifndef	NO_PACKING
-		/* Uncompress 20 bytes of received data into 80 encoded samples */
-		G726AUnpack(packedData, encodedSamples, G726A_FRAME_SIZE, G726A_16KBPS);
+	/* Uncompress 20 bytes of received data into 80 encoded samples */
+	G726AUnpack(packedData, encodedSamples, G726A_FRAME_SIZE, G726A_16KBPS);
 #endif
 
-		/* Decode the samples*/
-		G726ADecode(decoder, encodedSamples, decodedSamples);
+	/* Decode the samples*/
+	G726ADecode(decoder, encodedSamples, decodedSamples);
 
-		/* Scale sample*/
-		for(i = 0; i < G726A_FRAME_SIZE; i ++) 	{
-			/* Scale the decoded sample to 
-			 * adjust for the 16 to 14-bit scaling done before
-			 * encode */
-			decodedSamples[i] = decodedSamples[i] << 2;
-		}
-	}
-	else {
+	/* Scale sample*/
+	for(i = 0; i < G726A_FRAME_SIZE; i ++) 	{
+		/* Scale the decoded sample to 
+		 * adjust for the 16 to 14-bit scaling done before
+		 * encode */
+		decodedSamples[i] = decodedSamples[i] << 2;
 	}
 
 	#if defined TIMING_DECODE_DATA
-		TIMING_PULSE_PIN ^= 1;
+	TIMING_PULSE_PIN ^= 1;
 	#endif
 }	/* End of decodeData() */
 
@@ -295,7 +289,20 @@ void TASKS_writeCodec() {
 		TIMING_PULSE_PIN ^= 1;
 	#endif
 
-	WM8510Write(codecHandle, decodedSamples, G726A_FRAME_SIZE);
+	/* Wait till the codec is available for a new frame	
+	while(WM8510IsWriteBusy(codecHandle));	
+	*/
+	
+	/* Only write if WM8510 codec is ready for a new frame */
+	if(WM8510IsWriteBusy(codecHandle) == FALSE) {
+		WM8510Write(codecHandle, decodedSamples, G726A_FRAME_SIZE);
+	}
+	/* If WM8510 is busy, set RED LED until SW1 is pressed */
+	else {
+		RED_LED	= SASK_LED_ON;
+		while((CheckSwitchS1()) == 0);
+		RED_LED	= SASK_LED_OFF;
+	}
 
 	#if defined TIMING_WRITE_CODEC
 	TIMING_PULSE_PIN ^= 1;
@@ -375,7 +382,7 @@ void TASKS_playbackSpeechSegment() {
 	
 	writeAddress += PACKED_BYTES;
 	
-	if(currentReadAddress >= SPEECH_SEGMENT_SIZE) {
+	if(currentReadAddress >= writeAddress) {
 		currentReadAddress = 0;
 	}
 	

@@ -72,7 +72,7 @@ void SCH_UPDATE() _DCIInterrupt() {
 		}
 		
 		/* Wait for timeout and disable/clear timer */
-		while(!_T1IF);
+//		while(!_T1IF);
 		TIMER_timer1Stop();
 	
 		#if defined TIMING_SCH_UPDATE

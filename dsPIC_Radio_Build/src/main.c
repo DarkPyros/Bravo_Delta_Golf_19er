@@ -232,8 +232,8 @@ int main(void) {
 	 * location 0 to ensure they will always execute as quickly
 	 * as possible.
 	 */
-	SCH_addTask(WM8510IdleSampling, 1, 0, CO_OP);
-	SCH_addTask(TASKS_modeSelect, DELAY_MODE_SELECT, FRAME_PERIOD, CO_OP);
+	SCH_addTask(WM8510IdleSampling, DELAY_PLAYBACK_SAMPLING, 0, PRE_EMPTIVE);
+	SCH_addTask(TASKS_modeSelect, 	DELAY_MODE_SELECT, FRAME_PERIOD, CO_OP);
 	
 	/* After initialization, wait until CC430 pulls both
      * mode flags LOW.

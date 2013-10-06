@@ -16,14 +16,14 @@ extern int transceiverReady;
 /******* Public Constants *******/
 /* Task delay times*/
 #define	DELAY_PLAYBACK_SAMPLING		0
-#define	DELAY_READ_SPI				69
-#define DELAY_DECODE_DATA			30
-#define	DELAY_WRITE_CODEC			77
+#define	DELAY_READ_SPI				25
+#define DELAY_DECODE_DATA			26
+#define	DELAY_WRITE_CODEC			78
 
 #define	DELAY_RECORD_SAMPLING		0
-#define	DELAY_READ_CODEC			159
+#define	DELAY_READ_CODEC			158
 #define	DELAY_ENCODE_DATA			160
-#define DELAY_WRITE_SPI				161
+#define DELAY_WRITE_SPI				185
 
 #define	DELAY_MODE_SELECT	0
 #define DELAY_CHANGE_CODEC_SAMPLING		78

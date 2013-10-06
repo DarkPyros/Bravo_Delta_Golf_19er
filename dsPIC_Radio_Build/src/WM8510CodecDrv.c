@@ -180,6 +180,7 @@ void WM8510RecordSampling() {
 		thisWM8510Codec->currentSampleIndex = 0;		
 		thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
 		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
+		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_WRITE_BUSY;
 	}
 	else {
 		return;
