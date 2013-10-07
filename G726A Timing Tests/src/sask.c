@@ -1,7 +1,7 @@
 /**********************************************************************
 * © 2007 Microchip Technology Inc.
 *
-* FileName:        sask.h
+* FileName:        sask.c
 * Dependencies:    Header (.h) files if applicable, see below
 * Processor:       dsPIC33FJ256GP506
 * Compiler:        MPLAB® C30 v3.00 or higher
@@ -34,53 +34,93 @@
 * determining its suitability.  Microchip has no obligation to modify, test, 
 * certify, or support the code.
 ************************************************************************/
-#ifndef __SASK_BOARD_H__
-#define __SASK_BOARD_H__
-#include "..\h\p33FJ256GP506.h"
 
-/* The LEDS and their ports	*/
-#define YELLOW_LED_TRIS		_TRISC13
-#define GREEN_LED_TRIS		_TRISC14
-#define RED_LED_TRIS		_TRISC15
+#include "..\h\sask.h"
 
-#define YELLOW_LED		_LATC13
-#define GREEN_LED		_LATC14
-#define RED_LED			_LATC15
+int debounceS1;						/* Debounce counter for switch S1	*/
+int debounceS2;						/* Debounce counter for switch S2	*/
 
-/* The Switches and their ports */
+void SASKInit(void)
+{
+	/* Intialize the board LED and swicth ports	
+	 * and turn all LEDS off. Also switches on the 
+	 * VDD regulator on the serial flash memory 
+	 * chip 	*/
+	 
+	long vddRegWakeUpDelay;
+	
+	YELLOW_LED_TRIS	= 0;
+	RED_LED_TRIS = 0;		
+ 	GREEN_LED_TRIS = 0;	
 
-#define SWITCH_S1_TRIS	_TRISD8
-#define SWITCH_S2_TRIS	_TRISD9
+ 	YELLOW_LED = SASK_LED_OFF;	
+	RED_LED	= SASK_LED_OFF;		
+ 	GREEN_LED = SASK_LED_OFF;		
 
-#define SWITCH_S1	_RD8
-#define SWITCH_S2	_RD9
+ 	SWITCH_S1_TRIS = 1;	
+ 	SWITCH_S2_TRIS	= 1;
+ 	
+	VOLUME_UPDN_TRIS = 0;	
+	VOLUME_CLK_TRIS	= 0;
+	
+	VOLUME_UPDN = 0;
+	VOLUME_CLK = 0;	
+	
+	debounceS1 		= 0;
+	debounceS2 		= 0;
 
-/* Volume control pins	*/
-
-#define VOLUME_UPDN_TRIS	_TRISG0
-#define VOLUME_CLK_TRIS		_TRISG1
-
-#define VOLUME_UPDN	_LATG0
-#define VOLUME_CLK	_LATG1
-
-#define SWITCH_DEBOUNCE			12	/* Wait for this many times before switch press is valid		
-									 * For this application, each increment is 
-									 * occurs every at sampling interval *
-									 * frames size */
-#define SASK_LED_ON 	0
-#define SASK_LED_OFF	1
-
-#define REGULATOR_CONTROL_TRIS		TRISBbits.TRISB5
-#define REGULATOR_CONTROL_ANPCFG	AD1PCFGLbits.PCFG5
-#define REGULATOR_CONTROL_LAT		LATBbits.LATB5
-#define REGULATOR_WAKE_UP_DELAY	0x800
+	REGULATOR_CONTROL_ANPCFG = 1;
+	REGULATOR_CONTROL_TRIS	= 0;
+	REGULATOR_CONTROL_LAT = 1;
+	for(vddRegWakeUpDelay = 0;
+	vddRegWakeUpDelay < REGULATOR_WAKE_UP_DELAY;
+	vddRegWakeUpDelay++)
+	Nop();
 
 
-extern int debounceS1;
-extern int debounceS2;
+}
 
-void SASKInit(void);
-int CheckSwitchS1(void);
-int CheckSwitchS2(void);
+int CheckSwitchS1(void)
+{
+	/* This function returns a 1 if a valid key press was detected on SW1 */
+	int isActive;
+	if(SWITCH_S1 == 0){
+		
+		debounceS1++;
+		if (debounceS1 == SWITCH_DEBOUNCE){
+			
+			/* This means that the Switch S1 was pressed long enough
+			 * for a valid key press	*/
+			 isActive = 1;
+		}
+	}
+	else	{
+		debounceS1 = 0;
+		isActive = 0;
+	}
+	
+	return(isActive);
+}	
 
-#endif
+
+int CheckSwitchS2(void)
+{
+	/* This function returns a 1 if a valid key press was detected on SW2 */
+	int isActive;
+	if(SWITCH_S2 == 0){
+		/* If SW2 press was valid then toggle the record function	*/
+		debounceS2++;
+		if (debounceS2 == SWITCH_DEBOUNCE){
+			
+			/* This means that the Switch S1 was pressed long enough
+			 * for a valid key press	*/
+			isActive = 1;
+		}
+	}
+	else	{
+		debounceS2 = 0;
+		isActive = 0;
+	}
+	return(isActive);
+}
+

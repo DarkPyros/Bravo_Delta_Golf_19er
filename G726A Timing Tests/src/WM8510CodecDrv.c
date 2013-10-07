@@ -215,7 +215,7 @@ void __attribute__((__interrupt__,no_auto_psv)) _DCIInterrupt(void)
 /*FOR TESTING PURPOSES ONLY
  *measure how often interrupt executes.
  */	
-//	LATCbits.LATC15 ^= 1;
+/*	LATCbits.LATC14 ^= 1; */
 
 	/* Send and Recieve Samples */
 	
@@ -252,7 +252,7 @@ void __attribute__((__interrupt__,no_auto_psv)) _DCIInterrupt(void)
 /*FOR TESTING PURPOSES ONLY
  *measure interrupt execution time.
  */	
-//	LATCbits.LATC15 ^= 1;
+/*	LATCbits.LATC14 ^= 1; */
 }
 
 void WM8510SampleRate8KConfig(WM8510Handle *codecHandle)

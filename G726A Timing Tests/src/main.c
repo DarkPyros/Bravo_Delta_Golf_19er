@@ -188,14 +188,14 @@ _FWDT(FWDTEN_OFF);
 int rawSamples	[G726A_FRAME_SIZE]; 
 int decodedSamples [G726A_FRAME_SIZE];
 unsigned char encodedSamples[G726A_FRAME_SIZE];
-unsigned char packedData[PACKED_BYTES];
+unsigned char packedData[G726A_FRAME_SIZE];
 unsigned char encoder[G726A_ENCODER_SIZE];
 unsigned char decoder[G726A_DECODER_SIZE];
 
 /*FOR TESTING PURPOSES ONLY
  *array to store the packedBytes values of each sample.
  */
-//int bytesPerFrame[500];
+int bytesPerFrame[500];
 
 /* Allocate memory for buffers and drivers
  * codecBuffer - Buffer used by the codec driver
@@ -258,14 +258,9 @@ int main(void)
 	unsigned char i;
 	int j = 0;	/* FOR TESTING PURPOSES ONLY */
 	
-	/* FOR TESTING PURPOSES ONLY
-	 * packedBytes is the number of bytes returned
-     * by G726APack() and input for G726AUnpack()
-	 * for loop clears bytesPerFrame array */ 
+	/* packedBytes is the number of bytes returned
+     * by G726APack() and input for G726AUnpack() */ 
 	int packedBytes;
-
-//	for(;j<500;j++)
-//		bytesPerFrame[j] = 0;
 
 	/* Configure Oscillator to operate the device at 80MHz / 40 MIPS.
 	 * Fosc= Fin*M/(N1*N2), Fcy=Fosc/2
@@ -304,6 +299,9 @@ int main(void)
 	 * output frame	*/
 	while(1)
 	{
+		/*Obtain Audio Samples	*/
+		while(WM8510IsReadBusy(codecHandle));
+		WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);
 
 		/* Playback the intro message if record or play functions 
 		 * are not active. Read SFM from address 0 where the intro
@@ -320,6 +318,11 @@ int main(void)
 				currentReadAddress = 0;
 			}
 
+/*FOR TESTING PURPOSES ONLY
+ *measure decode execution time.
+ */	
+	LATCbits.LATC14 ^= 1; 
+
 			/* Decode the samples	*/
 			G726ADecode(decoder, encodedSamples, decodedSamples);
 			
@@ -330,6 +333,11 @@ int main(void)
 	             * encode */
 	            decodedSamples[i] = decodedSamples[i] << 2;
 			}
+
+/*FOR TESTING PURPOSES ONLY
+ *measure decode execution time.
+ */	
+	LATCbits.LATC14 ^= 1;
 
 			/* Wait till the codec is available for a new  frame	*/
 			while(WM8510IsWriteBusy(codecHandle));	
@@ -354,7 +362,7 @@ int main(void)
 				WM8510Stop(codecHandle);
 				currentWriteAddress = WRITE_START_ADDRESS;
 				userPlaybackAddress = WRITE_START_ADDRESS;
-//				RED_LED = SASK_LED_ON;
+				RED_LED = SASK_LED_ON;
 				YELLOW_LED = SASK_LED_OFF;
 			
 				for(address = WRITE_START_ADDRESS; 
@@ -364,7 +372,7 @@ int main(void)
 					SFMBlockErase(address);
 					
 				}
-//				RED_LED = SASK_LED_OFF;		
+				RED_LED = SASK_LED_OFF;		
 				 
 				erasedBeforeRecord = 1;
 				WM8510Start(codecHandle);
@@ -379,27 +387,6 @@ int main(void)
 				
 				YELLOW_LED = SASK_LED_ON;
 
-/*FOR TESTING PURPOSES ONLY
- *measure encode and pack execution time.
- */	
-//	LATCbits.LATC14 ^= 1;
-
-				/*Obtain Audio Samples	*/
-				while(WM8510IsReadBusy(codecHandle));
-
-/*FOR TESTING PURPOSES ONLY
- *measure encode and pack execution time.
- */	
-//	LATCbits.LATC14 ^= 1;
-
-				WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);
-
-
-/*FOR TESTING PURPOSES ONLY
- *measure encode and pack execution time.
- */	
-//	LATCbits.LATC14 ^= 1;
-
 			    for(i = 0; i < G726A_FRAME_SIZE; i ++)
 			    {
 			        // Not necessary if its known that input
@@ -409,22 +396,15 @@ int main(void)
 
         		G726AEncode(encoder,rawSamples,encodedSamples);
 				
-				G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
-
-/*FOR TESTING PURPOSES ONLY
- *measure encode and pack execution time.
- */	
-//	LATCbits.LATC14 ^= 1;
+				packedBytes = G726APack(encodedSamples, packedData, G726A_FRAME_SIZE, G726A_16KBPS);
 
 				/* Causes compile warning due to passing unsigned char* to char* argument */
 				currentWriteAddress += SFMWrite(currentWriteAddress,
-							packedData, PACKED_BYTES);
+							encodedSamples, packedBytes);
 			
 				/*FOR TESTING PURPOSES ONLY - record byte size of packedData per Frame */
-//				if(j >= 500)
-//					j = 0;
-//				bytesPerFrame[j] = packedBytes;
-//				j++;
+				bytesPerFrame[j] = packedBytes;
+				j++;
 
 				if(currentWriteAddress >= SFM_LAST_ADDRESS)
 				{
@@ -444,22 +424,17 @@ int main(void)
 		 
 		if(playback == 1)
 		{
-//			GREEN_LED = SASK_LED_ON;
+			GREEN_LED = SASK_LED_ON;
 			erasedBeforeRecord = 0;		
 
 			/* Causes compile warning due to passing unsigned char* to char* argument */
 			userPlaybackAddress += SFMRead(userPlaybackAddress,
-							packedData, PACKED_BYTES);
+							encodedSamples, G726A_FRAME_SIZE);
 			
 			if(userPlaybackAddress >= currentWriteAddress)
 			{
 				userPlaybackAddress = WRITE_START_ADDRESS;
 			}
-
-/*FOR TESTING PURPOSES ONLY
- *measure decode and unpack execution time.
- */	
-//	LATCbits.LATC14 ^= 1;
 
 			G726AUnpack(packedData, encodedSamples, G726A_FRAME_SIZE, G726A_16KBPS);
 
@@ -475,31 +450,11 @@ int main(void)
 	            decodedSamples[i] = decodedSamples[i] << 2;
 			}
 
-/*FOR TESTING PURPOSES ONLY
- *measure decode and unpack execution time.
- */	
-//	LATCbits.LATC14 ^= 1;
-
-/*FOR TESTING PURPOSES ONLY
- *measure WM Codec write execution time.
- */	
-//	LATCbits.LATC14 ^= 1;
-
 			/* Wait till the codec is available for a new  frame	*/
 			while(WM8510IsWriteBusy(codecHandle));	
-
-/*FOR TESTING PURPOSES ONLY
- *measure WM Codec write execution time.
- */	
-//	LATCbits.LATC14 ^= 1;
 		
 			/* Write the frame to the output	*/
 			WM8510Write (codecHandle,decodedSamples,G726A_FRAME_SIZE);
-
-/*FOR TESTING PURPOSES ONLY
- *measure WM Codec write execution time.
- */	
-//	LATCbits.LATC14 ^= 1;
 		
 		}
 
@@ -519,7 +474,7 @@ int main(void)
 			if(record == 1)
 			{
 				playback = 0;
-//				GREEN_LED = SASK_LED_OFF;
+				GREEN_LED = SASK_LED_OFF;
 
 			}
 			else
@@ -536,7 +491,7 @@ int main(void)
 			 * And if recording, disable playback.
 			 * */
 			 
-//			GREEN_LED ^=1;
+			GREEN_LED ^=1;
 			playback =1 ;
 			userPlaybackAddress = WRITE_START_ADDRESS;
 			currentReadAddress = 0;		

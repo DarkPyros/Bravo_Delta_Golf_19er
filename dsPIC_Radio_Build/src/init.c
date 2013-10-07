@@ -5,8 +5,11 @@ void INIT_init(void) {
 	
 	INIT_clockInit();
 	INIT_portInit();
+
+#ifndef USE_SFM_CHIP
 	SCH_initExtTrigger();
 	SPI_SlaveInit();
+#endif
 
 	/* Set operating mode to IDLE */
 	modeFlag 	= IDLE;

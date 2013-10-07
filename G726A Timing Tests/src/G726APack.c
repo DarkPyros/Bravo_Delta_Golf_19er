@@ -157,54 +157,192 @@
 *
 *  END OF TERMS AND CONDITIONS
 ***************************************************************************/
+#include "..\h\G726APack.h"
 
-#include "..\h\includes.h"
+int G726APack(unsigned char * src, void * dest, int nSrcSamples, G726A_BIT_RATES rate)
+{
+    unsigned int packedWord;
+    unsigned int shiftedEncSample;
+    int sample;
+    int samplesPerPackedWord;
+    unsigned int * packedWordDest = (unsigned int *) dest;
+    int subFrameIndex;
+    int packedSampleIndex;
 
-/* Disable clock write protection
- * Select Primary OSC w/ PLL
- * Clock switch enabled, OSC2 Pin digital I/O, external clock (12 MHZ)
- * Watchdog Time disabled
- */
-_FGS(GWRP_OFF & GCP_OFF);
-_FOSCSEL(FNOSC_PRIPLL);
-_FOSC(FCKSM_CSECMD & OSCIOFNC_ON & POSCMD_EC);
-_FWDT(FWDTEN_OFF);
+    if (nSrcSamples <= 0)
+    {
+        /* Nothing to do. */
+        return(0);
+    }
 
-int main(void) {
+    switch(rate)
+    {
+        case G726A_16KBPS:
+            
+            /* For 16Kbps, each encoded sample is 2 bits. So
+             * a 16 bit word can pack 8 encoded samples.
+             */
+            
+            samplesPerPackedWord = 8;
+            break;
 
-	/* Run initialization functions */	
-	INIT_init();
-	TASKS_audioCodecInit();
+        case G726A_24KBPS:
 
-	/* A startup, the first pre-emptive tasks is placed in 
-	 * location 0 to ensure they will always execute as quickly
-	 * as possible.
-	 */
-	SCH_addTask(WM8510IdleSampling, DELAY_PLAYBACK_SAMPLING, 0, PRE_EMPTIVE);
-	SCH_addTask(TASKS_modeSelect, 	DELAY_MODE_SELECT, FRAME_PERIOD, CO_OP);
-	
-	/* After initialization, wait until CC430 pulls both
-     * mode flags LOW.
-	 */
-	#if defined TIMING_TEST
-		TIMING_PULSE_TRIS = 0;
-		TIMING_PULSE_PIN = 0;
+            /* For 24Kbps, each encoded sample is 3 bits. So
+             * a 16 bit word can pack 5 encoded samples.
+             */
+               
+            samplesPerPackedWord = 5;
+            break;
+    
+        case G726A_32KBPS:
 
-		modeFlag = PLAYBACK;
-		while((CheckSwitchS1()) == 0);
+            /* For 32Kbps, each encoded sample is 4 bits. So
+             * a 16 bit word can pack 4 encoded samples.
+             */
+               
+            samplesPerPackedWord = 4;
+            break;
+        
+        case G726A_40KBPS:
 
-	#else
-		while( (PLAYBACK_FLAG || RECORD_FLAG) );
-	#endif
+            /* For 40Kbps, each encoded sample is 5 bits. So
+             * a 16 bit word can pack 3 encoded samples.
+             */
+               
+            samplesPerPackedWord = 3;
+            break;
 
-	/* Once the CC430 signals it is ready, start the scheduler
-	 * and SCH_UPDATES() sends synchronization pulses to CC430.
-	 */
-	SCH_start();
-	
-	/* Main processing loop. */
-	while(1) {
-		SCH_dispatchTasks();		
-	}	/* End of main processing loop */
-} /* End of main() */
-/******* End of File *******/
+        default:
+            /* Unknown rate */
+            return(0);
+    }
+
+    /* Perform the packing */
+
+    sample = 0;
+    packedWord = 0;
+    subFrameIndex = 0;
+    packedSampleIndex = 0;
+
+    while (sample < nSrcSamples)
+    {
+        shiftedEncSample = src[sample];
+        shiftedEncSample = shiftedEncSample << (subFrameIndex * rate);
+        packedWord = packedWord | shiftedEncSample;
+        subFrameIndex ++;
+        sample ++;
+
+        if(subFrameIndex == samplesPerPackedWord)
+        {
+            /* This means that the maximum number of
+             * encoded samples were encoded in this
+             * 16 bit word. Store the 16 bit sample
+             * and get ready for the next word.
+             */
+
+            packedWordDest[packedSampleIndex] = packedWord;
+            subFrameIndex = 0;
+            packedSampleIndex ++;
+            packedWord = 0;
+        }
+    }
+    
+    /* Check if any samples are left over. This happens if the
+     * total encoded samples is not a integral multiple of the
+     * number of encoded bits per sample.*/
+    
+    if(subFrameIndex != 0)
+    {
+        packedWordDest[packedSampleIndex] = packedWord;
+        packedSampleIndex ++;
+    }
+
+    /* Return the number of bytes written */
+    return(packedSampleIndex * 2);
+
+}  
+
+int G726AUnpack(void * src, unsigned char * dest, int nSrcSamples, G726A_BIT_RATES rate)
+{
+    int samplesPerPackedWord;
+    unsigned int * packedWordArray = (unsigned int *)src;
+    unsigned int packedWord;
+    unsigned char unpacked;
+    int subFrameIndex;
+    int sample;
+    int packedWordIndex;
+    int mask;
+
+    switch(rate)
+    {
+        case G726A_16KBPS:
+            
+            /* For 16Kbps, each encoded sample is 2 bits. So
+             * a 16 bit word can pack 8 encoded samples.
+             */
+            
+            samplesPerPackedWord = 8;
+            mask = 0x3;
+            break;
+
+        case G726A_24KBPS:
+
+            /* For 24Kbps, each encoded sample is 3 bits. So
+             * a 16 bit word can pack 5 encoded samples.
+             */
+               
+            samplesPerPackedWord = 5;
+            mask = 0x7;
+            break;
+    
+        case G726A_32KBPS:
+
+            /* For 32Kbps, each encoded sample is 4 bits. So
+             * a 16 bit word can pack 4 encoded samples.
+             */
+               
+            samplesPerPackedWord = 4;
+            mask = 0xF;
+            break;
+        
+        case G726A_40KBPS:
+
+            /* For 40Kbps, each encoded sample is 5 bits. So
+             * a 16 bit word can pack 3 encoded samples.
+             */
+               
+            samplesPerPackedWord = 3;
+            mask = 0x1F;
+            break;
+
+        default:
+            /* Unknown rate */
+            return(0);
+    }
+
+    packedWordIndex = 0;
+    sample = 0;
+    packedWord = packedWordArray[packedWordIndex];
+    subFrameIndex = 0;
+    while(sample < nSrcSamples)
+    {
+        unpacked = (packedWord >> (subFrameIndex * rate));
+        unpacked = unpacked & mask;
+        dest[sample] = unpacked;
+        sample ++;
+        subFrameIndex ++;
+
+        if(subFrameIndex == samplesPerPackedWord)
+        {
+            subFrameIndex = 0;
+            packedWordIndex ++;
+            packedWord = packedWordArray[packedWordIndex];
+        }
+    }
+    
+    return(sample);
+    
+}
+
+

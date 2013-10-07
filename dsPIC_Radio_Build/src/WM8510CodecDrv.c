@@ -180,11 +180,12 @@ void WM8510RecordSampling() {
 		thisWM8510Codec->currentSampleIndex = 0;		
 		thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
 		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
+		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_WRITE_BUSY;
 	}
 	else {
 		return;
 	}
-} /* End of WM8510RecordSampling */
+} /* End of WM8510RecordSampling() */
 
 void WM8510PlaybackSampling() {
 
@@ -215,8 +216,15 @@ void WM8510PlaybackSampling() {
 	else {
 		return;
 	}
-} /* End of WM8510PlaybackSampling */
-	
+} /* End of WM8510PlaybackSampling() */
+
+void WM8510IdleSampling() {
+		thisWM8510Codec->currentSampleIndex = 0;		
+		thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
+		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
+		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_WRITE_BUSY;
+} /* End of WM8510IdleSampling() */
+
 int WM8510IOCtl(WM8510Handle * pHandle,int command, void * value)
 {
 	/* Use the I2C module to send the control data to the codec
@@ -268,56 +276,6 @@ int WM8510IOCtl(WM8510Handle * pHandle,int command, void * value)
 	return(1);
 }
 
-<<<<<<< HEAD:G726A RecordPlay Demo/src/WM8510CodecDrv.c
-void __attribute__((__interrupt__,no_auto_psv)) _DCIInterrupt(void)
-{
-	_DCIIF = 0;;
-
-/*FOR TESTING PURPOSES ONLY
- *measure how often interrupt executes.
- */	
-//	LATCbits.LATC15 ^= 1;
-
-	/* Send and Recieve Samples */
-	
-	thisWM8510Codec->activeInputBuffer[thisWM8510Codec->currentSampleIndex] = RXBUF0;
-	TXBUF0 = thisWM8510Codec->activeOutputBuffer[thisWM8510Codec->currentSampleIndex];
-	thisWM8510Codec->currentSampleIndex++;
-	
-	if(thisWM8510Codec->currentSampleIndex == thisWM8510Codec->currentFrameSize)
-	{
-		/* Transmitted one frame of data.
-		 * Recieved one frame of data.
-		 * Toggle the buffer indicator bit */
-	
-		thisWM8510Codec->statusFlag ^= WM8510DRV_TGL_BUFFER_IND;
-		if((thisWM8510Codec->statusFlag &	WM8510DRV_GET_BUFFER_IND) != 0)
-		{
-			/* Buffer indicator is 1 means use buffer2	*/
-			thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer2;
-			thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer2;
-		}
-		else
-		{
-			/* Buffer indicator is 0 means use buffer1	*/
-			thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer1;
-			thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer1;
-		}
-		/* Reset the sample index and update the sample count	*/
-		thisWM8510Codec->currentSampleIndex = 0;		
-		thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
-		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
-		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_WRITE_BUSY;
-	}
-
-/*FOR TESTING PURPOSES ONLY
- *measure interrupt execution time.
- */	
-//	LATCbits.LATC15 ^= 1;
-}
-
-=======
->>>>>>> origin/Audio_Codec_Radio_Build:dsPIC_Radio_Build/src/WM8510CodecDrv.c
 void WM8510SampleRate8KConfig(WM8510Handle *codecHandle)
 {
 	int commandValue,result;

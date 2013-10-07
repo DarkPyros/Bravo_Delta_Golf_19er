@@ -157,54 +157,114 @@
 *
 *  END OF TERMS AND CONDITIONS
 ***************************************************************************/
+#ifndef _G726A_PACK_H_
+#define _G726A_PACK_H_
 
-#include "..\h\includes.h"
+#include "..\h\G726A.h"
 
-/* Disable clock write protection
- * Select Primary OSC w/ PLL
- * Clock switch enabled, OSC2 Pin digital I/O, external clock (12 MHZ)
- * Watchdog Time disabled
- */
-_FGS(GWRP_OFF & GCP_OFF);
-_FOSCSEL(FNOSC_PRIPLL);
-_FOSC(FCKSM_CSECMD & OSCIOFNC_ON & POSCMD_EC);
-_FWDT(FWDTEN_OFF);
+/*******************************************************************************
+  Function:
+    int G726APack(unsigned char * src, void * dest, int nSrcSamples, G726A_BIT_RATES rate);
 
-int main(void) {
+  Summary:
+    This routine packs the G726A encoded samples in src and stores them in
+    dest. 
 
-	/* Run initialization functions */	
-	INIT_init();
-	TASKS_audioCodecInit();
+  Description:
+    This routine packs the G726A encoded samples in src and stores them in
+    dest. The G726A encoder outputs one byte per encoded sample. The number
+    of significant bits within this byte is determined by the G726A bit rate.
+    The routine will pack as many encoded samples as possible with in the
+    destination memory. The number of bytes written to the dest array is
+    returned.
+  
+  Precondition:
+    None.
 
-	/* A startup, the first pre-emptive tasks is placed in 
-	 * location 0 to ensure they will always execute as quickly
-	 * as possible.
-	 */
-	SCH_addTask(WM8510IdleSampling, DELAY_PLAYBACK_SAMPLING, 0, PRE_EMPTIVE);
-	SCH_addTask(TASKS_modeSelect, 	DELAY_MODE_SELECT, FRAME_PERIOD, CO_OP);
-	
-	/* After initialization, wait until CC430 pulls both
-     * mode flags LOW.
-	 */
-	#if defined TIMING_TEST
-		TIMING_PULSE_TRIS = 0;
-		TIMING_PULSE_PIN = 0;
+  Parameters:
+    src          - Points to the G726A encoded samples array which needs to be
+                   packed.
+    
+    dest         - Points to the destination array where the packed data will be
+                   stored.
 
-		modeFlag = PLAYBACK;
-		while((CheckSwitchS1()) == 0);
+    nSrcSamples  - Specifies the number of encoded samples in src array.
 
-	#else
-		while( (PLAYBACK_FLAG || RECORD_FLAG) );
-	#endif
+    rate         - The G726A_BIT_RATES rate at which the samples in src where encoded.
+    
+  Returns:
+    A int type value indicating the number of bytes written to dest array.
 
-	/* Once the CC430 signals it is ready, start the scheduler
-	 * and SCH_UPDATES() sends synchronization pulses to CC430.
-	 */
-	SCH_start();
-	
-	/* Main processing loop. */
-	while(1) {
-		SCH_dispatchTasks();		
-	}	/* End of main processing loop */
-} /* End of main() */
-/******* End of File *******/
+  Example:
+    <code>
+    
+    // This code snippet shows how the G726A pack 
+    // function can be used. Note how the function
+    // operates in place (the encodedSamples array
+    // is used as the src and dest param to the pack
+    // function).
+
+    G726AEncode(encoder, rawSamples, encodedSamples);
+    G726APack(encodedSamples, encodedSamples, G726A_FRAME_SIZE, G726A_40KBPS); 
+
+    </code>
+
+  Remarks:
+    None.
+  *****************************************************************************/
+
+int G726APack(unsigned char * src, void * dest, int nSrcSamples, G726A_BIT_RATES rate);
+
+/*******************************************************************************
+  Function:
+    int G726AUnpack(void * src, unsigned char * dest, int nSrcSamples, G726A_BIT_RATES rate)
+
+  Summary:
+    This routine unpacks samples which were packed using the G726APack routine.
+
+  Description:
+    This routine unpacks samples which were packed using the G726APack routine.
+    The routine unpacks each sample into one byte per sample (which is compatible
+    with the G726A encoder output and decoder input). The number of samples unpacked
+    depends on the G726A bit rate and number of packed samples. The number of bytes
+    written to the dest array is returned.
+  
+  Precondition:
+    None.
+
+  Parameters:
+    src          - Points to the packed encoded samples array.
+    
+    dest         - Points to the destination array where the un-packed data will be
+                   stored.
+
+    nSrcSamples  - Specifies the number of packed encoded samples in src array.
+
+    rate         - The G726A_BIT_RATES rate at which the samples in src where encoded.
+    
+  Returns:
+    A int type value indicating the number of bytes written to dest array.
+
+  Example:
+    <code>
+    
+    // This code snippet shows how the G726A pack 
+    // function can be used. Note how the function
+    // operates in place (the encodedSamples array
+    // is used as the src and dest param to the pack
+    // function). The unpacked samples are stored in
+    // data. This is then decoded.
+
+    G726AEncode(encoder, rawSamples, encodedSamples);
+    G726APack(encodedSamples, encodedSamples, G726A_FRAME_SIZE, G726A_40KBPS);
+    G726AUnpack(encodedSamples, data, G726A_FRAME_SIZE, G726A_40KBPS); 
+    G726ADecode(decoder, data, rawSamples);
+
+    </code>
+
+  Remarks:
+    None.
+  *****************************************************************************/
+int G726AUnpack(void * src, unsigned char * dest, int nSrcSamples, G726A_BIT_RATES rate);
+
+#endif

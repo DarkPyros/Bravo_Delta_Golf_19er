@@ -44,8 +44,8 @@
 #define RED_LED_TRIS		_TRISC15
 
 #define YELLOW_LED		_LATC13
-#define GREEN_LED		_LATC14
-#define RED_LED			_LATC15
+#define GREEN_LED			_LATC14
+#define RED_LED		_LATC15
 
 /* The Switches and their ports */
 
@@ -74,10 +74,6 @@
 #define REGULATOR_CONTROL_ANPCFG	AD1PCFGLbits.PCFG5
 #define REGULATOR_CONTROL_LAT		LATBbits.LATB5
 #define REGULATOR_WAKE_UP_DELAY	0x800
-
-
-extern int debounceS1;
-extern int debounceS2;
 
 void SASKInit(void);
 int CheckSwitchS1(void);

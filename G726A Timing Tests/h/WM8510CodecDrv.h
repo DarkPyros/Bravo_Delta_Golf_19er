@@ -1,6 +1,8 @@
 #ifndef _WM8510CODECDRV_H_
 #define  _WM8510CODECDRV_H_
 
+#include "..\h\p33FJ256GP506.h"
+
 #define WM8510DRV_DCI_MASTER 				1
 #define WM8510DRV_CODEC_FRAME 				80
 #define WM8510DRV_DRV_BUFFER_SIZE			(WM8510DRV_CODEC_FRAME * 4)
@@ -97,14 +99,9 @@ void 	WM8510Start		(WM8510Handle * pHandle);
 void 	WM8510Stop		(WM8510Handle * pHandle);
 void 	WM8510Read		(WM8510Handle * pHandle, int * source, int size);
 void 	WM8510Write		(WM8510Handle * pHandle, int * dest, int size);
-int 	WM8510IOCtl		(WM8510Handle * pHandle,int command, void * value);
-int 	WM8510IsReadBusy(WM8510Handle * pHandle);
+int 		WM8510IOCtl		(WM8510Handle * pHandle,int command, void * value);
+int 		WM8510IsReadBusy(WM8510Handle * pHandle);
 int		WM8510IsWriteBusy(WM8510Handle * pHandle);
-
-
-void WM8510RecordSampling();
-void WM8510PlaybackSampling();
-void WM8510IdleSampling();
 
 /* These are helper functions. Use if you need to	*/
 
