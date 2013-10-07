@@ -5,13 +5,12 @@
 #define FALSE 0
 
 /* Uncomment to user SFM chip */
-//#define 	USE_SFM_CHIP
+#define 	USE_SFM_CHIP
 /* Uncomment to remove SPI buffer while loop */
 //#define 	NO_WAIT_FOR_SPI
 /* Uncomment to remove Packing and Unpacking of
  * encoded samples
  */
-//#define 	NO_PACKING
 
 #define 	TIMING_TEST
 //#define 	TIMING_SCH_UPDATE
@@ -26,5 +25,35 @@
 
 //#define 	TIMING_READ_SPEECH_SEGMENT
 //#define 	TIMING_WRITE_SPEECH_SEGMENT
+
+#if defined USE_SFM_CHIP
+
+#include "..\h\SST25VF040BDrv.h"
+
+#define FRAME_SIZE 				80		
+#define SPEECH_SEGMENT_SIZE		29184L	
+#define WRITE_START_ADDRESS	0x20000
+
+extern char 	flashMemoryBuffer	[];
+//SST25VF040BHandle flashMemoryHandle; 
+
+/* Addresses 
+ * currentReadAddress - This one tracks the intro message	
+ * currentWriteAddress - This one tracks the writes to flash	
+ * userPlaybackAddress - This one tracks user playback		
+ * address - Used during flash erase
+ * */
+
+/*USE_SFM_CHIP */
+extern long currentReadAddress;		
+extern long currentWriteAddress;		
+extern long userPlaybackAddress;		
+extern long address;	
+extern int erasedBeforeRecord;
+
+void writeSFM();
+void readSFM();
+#endif
+
 
 #endif

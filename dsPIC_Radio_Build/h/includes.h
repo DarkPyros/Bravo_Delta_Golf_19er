@@ -14,4 +14,9 @@
 #include "..\h\timer.h"
 #include "..\h\tasks.h"
 
+#if defined USE_SFM_CHIP
+#include "..\h\SST25VF040BDrv.h"
+#include "..\h\SFMDrv.h"
+#endif
+
 #endif

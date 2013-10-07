@@ -7,10 +7,11 @@
 sTask SCH_tasks[SCH_MAX_TASKS];
 
 void SCH_initExtTrigger() {
-	
+#ifndef USE_SFM_CHIP	
 	/* Initialize PortB pin as output for synchronization clock pulse */
 	SYNC_CLK_PULSE_TRIS	= 0;
 	SYNC_CLK_PULSE_PIN	= 0;
+#endif
 } /* End of SCH_initExtTrigger() */
 
 void SCH_UPDATE() _DCIInterrupt() {
@@ -22,8 +23,9 @@ void SCH_UPDATE() _DCIInterrupt() {
 	/* Start sending synchronization clock pulse to other micro-controller
 	 * and updating tasks once the ready signal has been received*/
 	if(transceiverReady == TRUE) {
+#ifndef USE_SFM_CHIP
 		SYNC_CLK_PULSE_PIN ^= 1;
-		
+#endif		
 		/* 12.4 microsecond sandwich delay */
 		TIMER_timer1Start(310);
 		

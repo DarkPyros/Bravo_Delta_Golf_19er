@@ -14,10 +14,12 @@ unsigned char packedData[PACKED_BYTES];
 unsigned char encoder[G726A_ENCODER_SIZE];
 unsigned char decoder[G726A_DECODER_SIZE];
 
-#define SPEECH_SEGMENT_SIZE   		5000L 	//9728L	
-char savedSpeechSegment[SPEECH_SEGMENT_SIZE];
-long currentReadAddress = 0;
+#if defined NOT_IN_USE
+//#define SPEECH_SEGMENT_SIZE   		5000L 	//9728L	
+//char savedSpeechSegment[SPEECH_SEGMENT_SIZE];
+//long currentReadAddress = 0;
 long writeAddress = 0;
+#endif
 
 /* Allocate memory for buffers and drivers
  * codecBuffer - Buffer used by the codec driver
@@ -118,8 +120,12 @@ void TASKS_modeSelect() {
 				SCH_deleteTask(i);
 			}
 
+			#if defined USE_SFM_CHIP
+			SCH_addTask(readSFM, DELAY_READ_SPI, FRAME_PERIOD, CO_OP);
+			#else
 			//SCH_addTask(TASKS_readFromSPI, DELAY_READ_SPI, 	  FRAME_PERIOD, CO_OP);
 			SCH_addTask(TASKS_playbackSpeechSegment, DELAY_READ_SPI, FRAME_PERIOD, CO_OP);
+			#endif
 			SCH_addTask(TASKS_decodeData,  DELAY_DECODE_DATA, FRAME_PERIOD, CO_OP);
 			SCH_addTask(TASKS_writeCodec,  DELAY_WRITE_CODEC, FRAME_PERIOD, CO_OP);
 		}	
@@ -137,8 +143,12 @@ void TASKS_modeSelect() {
 			
 			SCH_addTask(TASKS_readCodec,  DELAY_READ_CODEC,  FRAME_PERIOD, CO_OP);
 			SCH_addTask(TASKS_encodeData, DELAY_ENCODE_DATA, FRAME_PERIOD, CO_OP);
+			#if defined USE_SFM_CHIP
+			SCH_addTask(writeSFM, DELAY_WRITE_SPI, FRAME_PERIOD, CO_OP);
+			#else
 			//SCH_addTask(TASKS_writeToSPI, DELAY_WRITE_SPI,   FRAME_PERIOD, CO_OP);
 			SCH_addTask(TASKS_recordSpeechSegment, DELAY_WRITE_SPI, FRAME_PERIOD, CO_OP);
+			#endif
 		}	
 		else {
 			/* Toggle indicator LEDs. */
@@ -151,6 +161,10 @@ void TASKS_modeSelect() {
 			for(i=2; i < (SCH_MAX_TASKS); i++) {
 				SCH_deleteTask(i);
 			}
+			
+			#if defined USE_SFM_CHIP
+			SCH_addTask(readSFM, DELAY_READ_SPI, FRAME_PERIOD, CO_OP);
+			#endif
 		}
 		
 		/* Add task to change the codec sampling mode at
@@ -192,7 +206,11 @@ void TASKS_changeCodecSampling() {
 	}
 	/* currentMode is IDLE, so there is no pre-emptive task */
 	else {
-		SCH_addTask(WM8510IdleSampling, DELAY_PLAYBACK_SAMPLING, 0, PRE_EMPTIVE);	
+		#if defined USE_SFM_CHIP
+		SCH_addTask(WM8510PlaybackSampling, DELAY_PLAYBACK_SAMPLING, 0, PRE_EMPTIVE);
+		#else
+		SCH_addTask(WM8510IdleSampling, DELAY_PLAYBACK_SAMPLING, 0, PRE_EMPTIVE);
+		#endif
 	}
 
 	#if defined TIMING_CHANGE_SAMPLING
@@ -233,13 +251,13 @@ void TASKS_readCodec() {
 	TIMING_PULSE_PIN ^= 1;
 	#endif
 
-	/* Obtain audio samples
-	while(WM8510IsReadBusy(codecHandle));
-	*/
-	
+static int count = 0;
+
 	/* Only read if WM8510 codec has recorded a new frame */	
 	if(WM8510IsReadBusy(codecHandle) == FALSE) {
 		WM8510Read(codecHandle, rawSamples, G726A_FRAME_SIZE);
+
+count++;
 	}
 	/* If WM8510 is busy, set RED LED until SW2 is pressed */
 	else {
@@ -262,10 +280,8 @@ void TASKS_decodeData() {
 		TIMING_PULSE_PIN ^= 1;
 	#endif
 	
-#ifndef	NO_PACKING
 	/* Uncompress 20 bytes of received data into 80 encoded samples */
 	G726AUnpack(packedData, encodedSamples, G726A_FRAME_SIZE, G726A_16KBPS);
-#endif
 
 	/* Decode the samples*/
 	G726ADecode(decoder, encodedSamples, decodedSamples);
@@ -369,6 +385,7 @@ void TASKS_readFromSPI() {
 	#endif
 } /* End of readFromSPI() */
 
+#if defined NOT_IN_USE
 void TASKS_playbackSpeechSegment() {
 	#if defined TIMING_READ_SPEECH_SEGMENT
 	TIMING_PULSE_PIN ^= 1;
@@ -412,4 +429,58 @@ void TASKS_recordSpeechSegment() {
 	TIMING_PULSE_PIN ^= 1;
 	#endif
 } /* End of TASKS_recordSpeechSegment() */
+#endif
+
+#if defined USE_SFM_CHIP
+void readSFM() {
+	if(currentMode == IDLE) {
+		currentReadAddress += SFMRead(currentReadAddress, encodedSamples, G726A_FRAME_SIZE);
+		
+		if(currentReadAddress >= SPEECH_SEGMENT_SIZE) {
+			currentReadAddress = 0;
+		}
+		
+		/* Decode the samples*/
+		G726ADecode(decoder, encodedSamples, decodedSamples);
+
+		int i;
+		/* Scale sample*/
+		for(i = 0; i < G726A_FRAME_SIZE; i ++) 	{
+			/* Scale the decoded sample to 
+			 * adjust for the 16 to 14-bit scaling done before
+			 * encode */
+			decodedSamples[i] = decodedSamples[i] << 2;
+		}
+	}
+	else {
+		userPlaybackAddress += SFMRead(userPlaybackAddress, packedData, PACKED_BYTES);
+			
+		if(userPlaybackAddress >= currentWriteAddress) {
+			userPlaybackAddress = WRITE_START_ADDRESS;
+		}
+	}
+}
+
+void writeSFM() {
+	if(erasedBeforeRecord == 0) {
+		currentWriteAddress = WRITE_START_ADDRESS;
+		userPlaybackAddress = WRITE_START_ADDRESS;
+		
+		for(address = WRITE_START_ADDRESS; address < SFM_LAST_ADDRESS; address += 0x10000) {
+			SFMBlockErase(address);
+		}
+		 
+		erasedBeforeRecord = 1;
+	}
+	else {
+		/* Causes compile warning due to passing unsigned char* to char* argument */
+		currentWriteAddress += SFMWrite(currentWriteAddress, packedData, PACKED_BYTES);
+		
+		if(currentWriteAddress >= SFM_LAST_ADDRESS) {
+			erasedBeforeRecord = 0;
+			modeFlag = PLAYBACK;
+		}
+	}
+}
+#endif
 /******* End of File *******/

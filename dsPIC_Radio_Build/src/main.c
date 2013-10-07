@@ -160,13 +160,6 @@
 
 #include "..\h\includes.h"
 
-#if defined USE_SFM_CHIP
-	#include "..\h\SFMDrv.h"
-	#define FRAME_SIZE 				80		
-	#define SPEECH_SEGMENT_SIZE		29184L	
-	#define WRITE_START_ADDRESS	0x20000
-#endif
-
 /* Disable clock write protection
  * Select Primary OSC w/ PLL
  * Clock switch enabled, OSC2 Pin digital I/O, external clock (12 MHZ)
@@ -179,7 +172,7 @@ _FWDT(FWDTEN_OFF);
 
 #if defined USE_SFM_CHIP
 char 	flashMemoryBuffer	[SFMDRV_BUFFER_SIZE];
-SST25VF040BHandle flashMemoryHandle; 
+SST25VF040BHandle flashMemoryHandle;
 
 /* Addresses 
  * currentReadAddress - This one tracks the intro message	
@@ -198,6 +191,10 @@ int erasedBeforeRecord;
 
 int main(void) {
 
+	/* Run initialization functions */	
+	INIT_init();
+	TASKS_audioCodecInit();
+
 #if defined USE_SFM_CHIP
 	/* Addresses 
 	 * currentReadAddress - This one tracks the intro message	
@@ -205,29 +202,27 @@ int main(void) {
 	 * userPlaybackAddress - This one tracks user playback		
 	 * address - Used during flash erase
 	 * */
-	long currentReadAddress = 0;		
-	long currentWriteAddress = WRITE_START_ADDRESS;		
-	long userPlaybackAddress = WRITE_START_ADDRESS;		
-	long address = 0;							
+	currentReadAddress = 0;		
+	currentWriteAddress = WRITE_START_ADDRESS;		
+	userPlaybackAddress = WRITE_START_ADDRESS;		
+	address = 0;							
 	
 	/* flags
-	 * record - if set means recording
-	 * playback - if set mean playback
 	 * erasedBeforeRecord - means SFM eras complete before record
 	 * */
-	int record = 0;						
-	int playback = 0;					
-	int erasedBeforeRecord = 0;	
+	erasedBeforeRecord = 0;	
+
+	long vddRegWakeUpDelay;
+	REGULATOR_CONTROL_ANPCFG = 1;
+	REGULATOR_CONTROL_TRIS	= 0;
+	REGULATOR_CONTROL_LAT = 1;
+	for(vddRegWakeUpDelay = 0; vddRegWakeUpDelay < REGULATOR_WAKE_UP_DELAY; vddRegWakeUpDelay++) {
+		Nop();
+	}
 
 	SFMInit(flashMemoryBuffer);
 #endif
 
-	/* Run initialization functions */	
-	INIT_init();
-	TASKS_audioCodecInit();
-
-//	programSpeech();
-	
 	/* A startup, the first pre-emptive tasks is placed in 
 	 * location 0 to ensure they will always execute as quickly
 	 * as possible.
@@ -259,5 +254,4 @@ int main(void) {
 		SCH_dispatchTasks();		
 	}	/* End of main processing loop */
 } /* End of main() */
-
 /******* End of File *******/
