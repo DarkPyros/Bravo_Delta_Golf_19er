@@ -56,6 +56,7 @@ const RF_SETTINGS rfSettings = {
     0x56,   // FREND1    Front end RX configuration.
     0x10,   // FREND0    Front end TX configuration.
     0x10,   // MCSM0     Main Radio Control State Machine Configuration
+    0x3F,	// MCSM1	 Main Radio Control State Machine Configuration
     0x16,   // FOCCFG    Frequency Offset Compensation Configuration
     0x6C,   // BSCFG     Bit synchronization Configuration.
     0x43,   // AGCCTRL2  AGC Control
@@ -80,6 +81,8 @@ const RF_SETTINGS rfSettings = {
     0x00,   // ADDR      Device address.
     PACKET_LEN // PKTLEN    Packet length.
 };
+
+tByte Radio_RX_Buffer[PACKET_LEN+2];
 
 void Radio_Init (void)
 {
@@ -129,35 +132,92 @@ void Radio_Read_RX_FIFO(tByte * const RX_Buffer, tByte size)
 	}
 }
 
-void Transmit(unsigned char *buffer, unsigned char length)
+void Radio_Transmit (tByte const * const buffer, tByte length)
 {
-  //RF1AIES |= BIT9;
-  //RF1AIFG &= ~BIT9;                         // Clear pending interrupts
-  //RF1AIE |= BIT9;                           // Enable TX end-of-packet interrupt
-
   WriteBurstReg(RF_TXFIFOWR, buffer, length);
 
   Strobe( RF_STX );                         // Strobe STX
 }
 
-void ReceiveOn(void)
+void Radio_Receive_On (void)
 {
-  //RF1AIES |= BIT9;                          // Falling edge of RFIFG9
-  //RF1AIFG &= ~BIT9;                         // Clear a pending interrupt
-  //RF1AIE  |= BIT9;                          // Enable the interrupt
-
   // Radio is in IDLE following a TX, so strobe SRX to enter Receive Mode
   Strobe( RF_SRX );
 }
 
-void ReceiveOff(void)
+void Radio_Receive_Off (void)
 {
-  //RF1AIE &= ~BIT9;                          // Disable RX interrupts
-  //RF1AIFG &= ~BIT9;                         // Clear pending IFG
-
   // It is possible that ReceiveOff is called while radio is receiving a packet.
   // Therefore, it is necessary to flush the RX FIFO after issuing IDLE strobe
   // such that the RXFIFO is empty prior to receiving a packet.
   Strobe( RF_SIDLE );
   Strobe( RF_SFRX  );
+}
+
+void Radio_Enable_RX_Interrupt (void)
+{
+	RF1AIES |= BIT9;                          // Falling edge of RFIFG9
+	RF1AIFG &= ~BIT9;                         // Clear a pending interrupt
+	RF1AIE  |= BIT9;                          // Enable the interrupt
+}
+
+void Radio_Disable_RX_Interrupt (void)
+{
+	RF1AIE &= ~BIT9;                          // Disable RX interrupts
+	RF1AIFG &= ~BIT9;                         // Clear pending IFG
+}
+
+#pragma vector=CC1101_VECTOR
+__interrupt void CC1101_ISR(void)
+{
+  tByte RxBufferLength;
+
+  switch(__even_in_range(RF1AIV,32))        // Prioritizing Radio Core Interrupt
+  {
+    case  0: break;                         // No RF core interrupt pending
+    case  2: break;                         // RFIFG0
+    case  4: break;                         // RFIFG1
+    case  6: break;                         // RFIFG2
+    case  8: break;                         // RFIFG3
+    case 10: break;                         // RFIFG4
+    case 12: break;                         // RFIFG5
+    case 14: break;                         // RFIFG6
+    case 16: break;                         // RFIFG7
+    case 18: break;                         // RFIFG8
+    case 20:                                // RFIFG9
+        // Read the length byte from the FIFO
+        RxBufferLength = ReadSingleReg( RXBYTES );
+        ReadBurstReg(RF_RXFIFORD, Radio_RX_Buffer, RxBufferLength);
+
+        // Stop here to see contents of RxBuffer
+        __no_operation();
+
+        // Check the CRC results
+        if(Radio_RX_Buffer[CRC_LQI_IDX] & CRC_OK)
+        {
+          LED_XOR;                    		// Toggle LED1
+
+          tByte i;
+
+          for (i = 0; i < hSCH_MAX_TASKS; i++)
+          {
+        	  hSCH_Delete_Task(i);
+          }
+
+          // Reset the global error variable
+          // - hSCH_Delete_Task() will generate an error code,
+          // (because the task array is empty)
+          Error_code_G = 0;
+
+
+        }
+      break;
+    case 22: break;                         // RFIFG10
+    case 24: break;                         // RFIFG11
+    case 26: break;                         // RFIFG12
+    case 28: break;                         // RFIFG13
+    case 30: break;                         // RFIFG14
+    case 32: break;                         // RFIFG15
+  }
+  __bic_SR_register_on_exit(LPM0_bits);
 }

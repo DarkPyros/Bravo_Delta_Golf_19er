@@ -64,6 +64,7 @@
 #define LED (BIT0)
 #define LED_ON P1OUT |= LED
 #define LED_OFF P1OUT &= ~LED
+#define LED_XOR P1OUT ^= LED
 #define LED_PORT_DIR P1DIR
 #define LED_PORT_SEL P1SEL
 
@@ -71,6 +72,7 @@
 #define RED_LED (BIT6)
 #define RED_LED_ON P3OUT |= RED_LED
 #define RED_LED_OFF P3OUT &= ~RED_LED
+#define RED_LED_XOR P3OUT ^= RED_LED
 #define RED_LED_PORT_DIR P3DIR
 #define RED_LED_PORT_SEL P3SEL
 

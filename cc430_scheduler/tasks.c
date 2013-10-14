@@ -51,9 +51,9 @@ extern tByte HexText[AES_SIZE * 4];
 
 void Schedule_Tasks (void)
 {
-	hSCH_Add_Task(Change_Channel_Task, RADIO_CHANGE_CHANNEL_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+	//hSCH_Add_Task(Change_Channel_Task, RADIO_CHANGE_CHANNEL_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 	//hSCH_Add_Task(Get_Next_Channel_Task, RNG_GET_RAND_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-	//hSCH_Add_Task(Start_Synchronization_Task, 2, (TICKS_PER_FRAME - 1), CO_OP);
+	hSCH_Add_Task(Start_Synchronization_Task, 2, (TICKS_PER_FRAME - 1), CO_OP);
 	//hSCH_Add_Task(Encrypt_Data_Task, ENCRYPT_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 	//hSCH_Add_Task(UART_Send_Task, UART_SEND_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 	hSCH_Add_Task(Task_Manager, TASK_MANAGER_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
@@ -70,7 +70,7 @@ void Change_Channel_Task (void)
 	tByte channel = 0;
 	tByte status;
 
-	//channel = RNG_Get_Rand();
+	// channel = RNG_Get_Rand();
 
 	// change to random frequency
 
@@ -108,11 +108,11 @@ void Start_Synchronization_Task (void)
 	if (Role_Flag_G == MASTER)
 	{
 		tByte * Sync_Info = RNG_Get_Nonce();
-		//Radio_Transmit(Sync_Info, AES_SIZE);
+		Radio_Transmit(Sync_Info, AES_SIZE);
 	}
 	else // Sync_Flag_G == SYNCED or SYNC_LOST
 	{
-		//Radio_Receive();
+		Radio_Receive_On();
 	}
 }
 

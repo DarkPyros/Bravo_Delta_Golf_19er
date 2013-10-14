@@ -14,10 +14,10 @@
 // @param       unsigned char strobe        The strobe command to be sent
 // @return      unsigned char statusByte    The status byte that follows the strobe
 // *****************************************************************************
-unsigned char Strobe (unsigned char strobe)
+tByte Strobe (tByte strobe)
 {
-	unsigned char statusByte = 0;
-	unsigned int  gdo_state;
+	tByte statusByte = 0;
+	tWord  gdo_state;
 
 	// Check for valid strobe command
 	if((strobe == 0xBD) || ((strobe >= RF_SRES) && (strobe <= RF_SNOP)))
@@ -68,9 +68,9 @@ unsigned char Strobe (unsigned char strobe)
 // @param       unsigned char addr      Target radio register address
 // @return      unsigned char data_out  Value of byte that was read
 // *****************************************************************************
-unsigned char ReadSingleReg (unsigned char addr)
+tByte ReadSingleReg (tByte addr)
 {
-	unsigned char data_out;
+	tByte data_out;
 
 	// Check for valid configuration register address, 0x3E refers to PATABLE
 	if ((addr <= 0x2E) || (addr == 0x3E))
@@ -93,7 +93,7 @@ unsigned char ReadSingleReg (unsigned char addr)
 // @param       unsigned char value     Value to be written
 // @return      none
 // *****************************************************************************
-void WriteSingleReg (unsigned char addr, unsigned char value)
+void WriteSingleReg (tByte addr, tByte value)
 {
 	while (!(RF1AIFCTL1 & RFINSTRIFG));       // Wait for the Radio to be ready for next instruction
 	RF1AINSTRB = (addr | RF_SNGLREGWR);	      // Send address + Instruction
@@ -111,9 +111,9 @@ void WriteSingleReg (unsigned char addr, unsigned char value)
 // @param       unsigned char count     Number of bytes to be read
 // @return      none
 // *****************************************************************************
-void ReadBurstReg(unsigned char addr, unsigned char *buffer, unsigned char count)
+void ReadBurstReg(tByte addr, tByte * const buffer, tByte count)
 {
-	unsigned int i;
+	tWord i;
 
 	if(count > 0)
 	{
@@ -140,9 +140,9 @@ void ReadBurstReg(unsigned char addr, unsigned char *buffer, unsigned char count
 // @param       unsigned char count     Number of bytes to be written
 // @return      none
 // *****************************************************************************
-void WriteBurstReg (unsigned char addr, unsigned char *buffer, unsigned char count)
+void WriteBurstReg (tByte addr, tByte const * const buffer, tByte count)
 {
-	unsigned char i;
+	tByte i;
 
 	if(count > 0)
 	{
@@ -194,6 +194,7 @@ void WriteRfSettings (const RF_SETTINGS *pRfSettings)
 	WriteSingleReg(FREND1,   pRfSettings->frend1);
 	WriteSingleReg(FREND0,   pRfSettings->frend0);
 	WriteSingleReg(MCSM0 ,   pRfSettings->mcsm0);
+	WriteSingleReg(MCSM1 ,   pRfSettings->mcsm1);
 	WriteSingleReg(FOCCFG,   pRfSettings->foccfg);
 	WriteSingleReg(BSCFG,    pRfSettings->bscfg);
 	WriteSingleReg(AGCCTRL2, pRfSettings->agcctrl2);
@@ -225,7 +226,7 @@ void WriteRfSettings (const RF_SETTINGS *pRfSettings)
 // @param       unsigned char value		Value to write
 // @return      none
 // *****************************************************************************
-void WriteSinglePATable (unsigned char value)
+void WriteSinglePATable (tByte value)
 {
 	while( !(RF1AIFCTL1 & RFINSTRIFG));
 	RF1AINSTRW = 0x3E00 + value;              // PA Table single write
@@ -241,7 +242,7 @@ void WriteSinglePATable (unsigned char value)
 // @param       unsigned char count	Number of values to be written
 // @return      none
 // *****************************************************************************
-void WriteBurstPATable (unsigned char *buffer, unsigned char count)
+void WriteBurstPATable (tByte const * const buffer, tByte count)
 {
 	volatile char i = 0;
 

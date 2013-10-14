@@ -12,56 +12,57 @@
 #include "../main.h"
 
 typedef struct S_RF_SETTINGS {
-    unsigned char fsctrl1;   // Frequency synthesizer control.
-    unsigned char fsctrl0;   // Frequency synthesizer control.
-    unsigned char freq2;     // Frequency control word, high byte.
-    unsigned char freq1;     // Frequency control word, middle byte.
-    unsigned char freq0;     // Frequency control word, low byte.
-    unsigned char mdmcfg4;   // Modem configuration.
-    unsigned char mdmcfg3;   // Modem configuration.
-    unsigned char mdmcfg2;   // Modem configuration.
-    unsigned char mdmcfg1;   // Modem configuration.
-    unsigned char mdmcfg0;   // Modem configuration.
-    unsigned char channr;    // Channel number.
-    unsigned char deviatn;   // Modem deviation setting (when FSK modulation is enabled).
-    unsigned char frend1;    // Front end RX configuration.
-    unsigned char frend0;    // Front end RX configuration.
-    unsigned char mcsm0;     // Main Radio Control State Machine configuration.
-    unsigned char foccfg;    // Frequency Offset Compensation Configuration.
-    unsigned char bscfg;     // Bit synchronization Configuration.
-    unsigned char agcctrl2;  // AGC control.
-    unsigned char agcctrl1;  // AGC control.
-    unsigned char agcctrl0;  // AGC control.
-    unsigned char worevt1;   //
-    unsigned char worevt0;   //
-    unsigned char worctrl;   //
-    unsigned char fscal3;    // Frequency synthesizer calibration.
-    unsigned char fscal2;    // Frequency synthesizer calibration.
-    unsigned char fscal1;    // Frequency synthesizer calibration.
-    unsigned char fscal0;    // Frequency synthesizer calibration.
-    unsigned char fstest;    // Frequency synthesizer calibration control
-    unsigned char test2;     // Various test settings.
-    unsigned char test1;     // Various test settings.
-    unsigned char test0;     // Various test settings.
-    unsigned char fifothr;   // RXFIFO and TXFIFO thresholds.
-    unsigned char iocfg2;    // GDO2 output pin configuration
-    unsigned char iocfg0;    // GDO0 output pin configuration
-    unsigned char pktctrl1;  // Packet automation control.
-    unsigned char pktctrl0;  // Packet automation control.
-    unsigned char addr;      // Device address.
-    unsigned char pktlen;    // Packet length.
+    tByte fsctrl1;   // Frequency synthesizer control.
+    tByte fsctrl0;   // Frequency synthesizer control.
+    tByte freq2;     // Frequency control word, high byte.
+    tByte freq1;     // Frequency control word, middle byte.
+    tByte freq0;     // Frequency control word, low byte.
+    tByte mdmcfg4;   // Modem configuration.
+    tByte mdmcfg3;   // Modem configuration.
+    tByte mdmcfg2;   // Modem configuration.
+    tByte mdmcfg1;   // Modem configuration.
+    tByte mdmcfg0;   // Modem configuration.
+    tByte channr;    // Channel number.
+    tByte deviatn;   // Modem deviation setting (when FSK modulation is enabled).
+    tByte frend1;    // Front end RX configuration.
+    tByte frend0;    // Front end RX configuration.
+    tByte mcsm0;     // Main Radio Control State Machine configuration.
+    tByte mcsm1;     // Main Radio Control State Machine configuration.
+    tByte foccfg;    // Frequency Offset Compensation Configuration.
+    tByte bscfg;     // Bit synchronization Configuration.
+    tByte agcctrl2;  // AGC control.
+    tByte agcctrl1;  // AGC control.
+    tByte agcctrl0;  // AGC control.
+    tByte worevt1;   //
+    tByte worevt0;   //
+    tByte worctrl;   //
+    tByte fscal3;    // Frequency synthesizer calibration.
+    tByte fscal2;    // Frequency synthesizer calibration.
+    tByte fscal1;    // Frequency synthesizer calibration.
+    tByte fscal0;    // Frequency synthesizer calibration.
+    tByte fstest;    // Frequency synthesizer calibration control
+    tByte test2;     // Various test settings.
+    tByte test1;     // Various test settings.
+    tByte test0;     // Various test settings.
+    tByte fifothr;   // RXFIFO and TXFIFO thresholds.
+    tByte iocfg2;    // GDO2 output pin configuration
+    tByte iocfg0;    // GDO0 output pin configuration
+    tByte pktctrl1;  // Packet automation control.
+    tByte pktctrl0;  // Packet automation control.
+    tByte addr;      // Device address.
+    tByte pktlen;    // Packet length.
 } RF_SETTINGS;
 
 void ResetRadioCore (void);
-unsigned char Strobe(unsigned char strobe);
+tByte Strobe(tByte strobe);
 
 void WriteRfSettings(const RF_SETTINGS *pRfSettings);
 
-void WriteSingleReg(unsigned char addr, unsigned char value);
-void WriteBurstReg(unsigned char addr, unsigned char *buffer, unsigned char count);
-unsigned char ReadSingleReg(unsigned char addr);
-void ReadBurstReg(unsigned char addr, unsigned char *buffer, unsigned char count);
-void WriteSinglePATable(unsigned char value);
-void WriteBurstPATable(unsigned char *buffer, unsigned char count);
+void WriteSingleReg(tByte addr, tByte value);
+void WriteBurstReg(tByte addr, tByte const * const buffer, tByte count);
+tByte ReadSingleReg(tByte addr);
+void ReadBurstReg(tByte addr, tByte * const buffer, tByte count);
+void WriteSinglePATable(tByte value);
+void WriteBurstPATable(tByte const * const buffer, tByte count);
 
 #endif /* RF1A_H_ */
