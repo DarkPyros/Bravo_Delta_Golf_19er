@@ -83,11 +83,8 @@ const RF_SETTINGS rfSettings = {
 
 void Radio_Init (void)
 {
-	// Set the High-Power Mode Request Enable bit so LPM3 can be entered
-	// with active radio enabled
-	//PMMCTL0_H = 0xA5;
-	//PMMCTL0_L |= PMMHPMRE_L;
-	//PMMCTL0_H = 0x00;
+	tByte status;
+	//static tByte channel = 0;
 
 	ResetRadioCore();
 
@@ -95,9 +92,19 @@ void Radio_Init (void)
 
 	WriteSinglePATable(PATABLE_VAL);
 
-	Strobe(RF_SCAL);
+	Strobe(RF_SRX);
 
+	do {
 
+		status = Strobe(RF_SNOP);
+
+	} while (((status & RF_STATE) != RF_STATE_IDLE) && ((status & RF_STATE) != RF_STATE_RX) && ((status & RF_STATE) != RF_STATE_TX));
+
+	WriteSingleReg(FSCAL3, (rfSettings.fscal3 & ~(VCO_CHARGE_PUMP_CAL)));
+
+	//WriteSingleReg(MCSM0, (rfSettings.mcsm0 & ~(FS_AUTOCAL)));
+
+	Strobe(RF_SIDLE);
 }
 
 void Radio_Read_RX_FIFO(tByte * const RX_Buffer, tByte size)

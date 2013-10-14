@@ -33,11 +33,20 @@ void Init (void)
 	// Setup the flags for signaling the dsPIC
 	Flags_Init();
 
+	// Setup LED output
+	LED_Init();
+
 	// Increase PMMCOREV level to 3 for proper radio operation
-	SetVCore(3);
+	//SetVCore(3);
 
 	// Setup the clock
 	Clock_Init();
+
+	// Use Timer_A0 to provide the timer
+	// tick for development purposes
+	#ifdef TIMER_TICK_TA0
+	   	Timer_A0_Init();
+	#endif
 
 	// Setup the RTC
 	RTC_Init();
@@ -47,15 +56,6 @@ void Init (void)
 
 	// Setup the SPI module
 	SPI_Init();
-
-	// Setup LED output
-	LED_Init();
-
-	// Use Timer_A0 to provide the timer
-	// tick for development purposes
-	#ifdef TIMER_TICK_TA0
-	   	Timer_A0_Init();
-	#endif
 
 	// Setup the AES module
 	AES_Init();

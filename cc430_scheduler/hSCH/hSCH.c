@@ -56,7 +56,7 @@ void hSCH_Dispatch_Tasks(void)
 {
 	tByte Index;
 
-	LED_ON;
+	//LED_ON;
 
 	// Dispatches (runs) the next task (if one is ready)
 	for (Index = 0; Index < hSCH_MAX_TASKS; Index++)
@@ -83,7 +83,7 @@ void hSCH_Dispatch_Tasks(void)
 	// The scheduler enters idle mode at this point
 	hSCH_Go_To_Sleep();
 
-	LED_OFF;
+	//LED_OFF;
 }
 
 /*------------------------------------------------------------------*-

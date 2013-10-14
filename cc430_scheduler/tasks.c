@@ -51,11 +51,13 @@ extern tByte HexText[AES_SIZE * 4];
 
 void Schedule_Tasks (void)
 {
-	//hSCH_Add_Task(Change_Channel_Task, 0, 80, PRE_EMP);
+	hSCH_Add_Task(Change_Channel_Task, RADIO_CHANGE_CHANNEL_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 	//hSCH_Add_Task(Get_Next_Channel_Task, RNG_GET_RAND_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-	hSCH_Add_Task(Encrypt_Data_Task, ENCRYPT_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-	hSCH_Add_Task(UART_Send_Task, UART_SEND_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-	//hSCH_Add_Task(Start_Synchronization_Task, 2, 80, CO_OP);
+	//hSCH_Add_Task(Start_Synchronization_Task, 2, (TICKS_PER_FRAME - 1), CO_OP);
+	//hSCH_Add_Task(Encrypt_Data_Task, ENCRYPT_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+	//hSCH_Add_Task(UART_Send_Task, UART_SEND_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+	hSCH_Add_Task(Task_Manager, TASK_MANAGER_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+
 
 	if (Role_Flag_G == SLAVE)
 	{
@@ -65,11 +67,39 @@ void Schedule_Tasks (void)
 
 void Change_Channel_Task (void)
 {
-	//tByte channel;
+	tByte channel = 0;
+	tByte status;
 
 	//channel = RNG_Get_Rand();
 
 	// change to random frequency
+
+	LED_ON;
+
+	do {
+
+		status = Strobe(RF_SNOP);
+
+	} while (((status & RF_STATE) != RF_STATE_IDLE) && ((status & RF_STATE) != RF_STATE_RX) && ((status & RF_STATE) != RF_STATE_TX));
+
+	WriteSingleReg(CHANNR, channel++);
+
+	//Strobe(RF_SIDLE);
+
+	Strobe(RF_SRX);
+
+	if(channel > 127)
+		channel = 0;
+
+	do {
+
+		status = Strobe(RF_SNOP);
+
+	} while (((status & RF_STATE) != RF_STATE_IDLE) && ((status & RF_STATE) != RF_STATE_RX) && ((status & RF_STATE) != RF_STATE_TX));
+
+	LED_OFF;
+
+	//Strobe(RF_SRX);
 
 }
 
@@ -177,6 +207,12 @@ void UART_Send_Task (void)
 	}
 
 	RED_LED_OFF;
+}
+
+void Task_Manager (void)
+{
+	Strobe(RF_SIDLE);
+
 }
 
 

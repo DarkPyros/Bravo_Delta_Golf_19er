@@ -89,7 +89,7 @@ __interrupt void hSCH_Update(void)
 	tByte Index;
 	static volatile tByte Tick_Counter = 0;
 
-	if ((Tick_Counter == 5) || (Tick_Counter == 6))
+	if (Tick_Counter == 0)
 		RED_LED_ON;
 
 	// NOTE: calculations are in *TICKS* (not milliseconds)
@@ -146,7 +146,7 @@ __interrupt void hSCH_Update(void)
 	// Exit interrupt in active mode
 	__bic_SR_register_on_exit(LPM0_bits);
 
-	if ((Tick_Counter == 5) || (Tick_Counter == 6))
+	if (Tick_Counter == 0)
 		RED_LED_OFF;
 
 	if (Tick_Counter >= 79)
