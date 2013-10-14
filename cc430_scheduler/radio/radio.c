@@ -125,7 +125,7 @@ void Radio_Read_RX_FIFO(tByte * const RX_Buffer, tByte size)
 		__no_operation();
 
 		// Check the CRC results
-		if(!(RX_Buffer[CRC_LQI_IDX] & CRC_OK))
+		if(!(RX_Buffer[RX_Buffer_Length - 1] & CRC_OK))
 		{
 			Error_code_G = ERROR_RADIO_RX_CRC_BAD;
 		}
@@ -193,7 +193,7 @@ __interrupt void CC1101_ISR(void)
         __no_operation();
 
         // Check the CRC results
-        if(Radio_RX_Buffer[CRC_LQI_IDX] & CRC_OK)
+        if(Radio_RX_Buffer[RxBufferLength - 1] & CRC_OK)
         {
           LED_XOR;                    		// Toggle LED1
 
@@ -209,6 +209,12 @@ __interrupt void CC1101_ISR(void)
           // (because the task array is empty)
           Error_code_G = 0;
 
+          Overwrite_Nonce(&(Radio_RX_Buffer[1]));
+
+          Sync_Schedule_Tasks();
+
+          Radio_Disable_RX_Interrupt();
+
 
 
 
@@ -221,5 +227,6 @@ __interrupt void CC1101_ISR(void)
     case 30: break;                         // RFIFG14
     case 32: break;                         // RFIFG15
   }
+
   __bic_SR_register_on_exit(LPM0_bits);
 }

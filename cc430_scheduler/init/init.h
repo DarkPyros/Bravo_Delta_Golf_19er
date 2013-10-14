@@ -33,7 +33,7 @@ void RTC_Init (void);
 void Sandwich_Timer_Init (void);
 void LED_Init (void);
 void Flags_Init (void);
-void Flags_Pulled_High (void);
+void Set_Start_Flag (void);
 
 #define Sandwich_Timer_Overflow() (TA1CCTL0 & CCIFG)
 

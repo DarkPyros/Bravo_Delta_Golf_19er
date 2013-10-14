@@ -49,6 +49,31 @@ tByte Radio_Data_Packet_Buffer[AES_SIZE * 2] = { 0x00, 0x00, 0x00, 0x00,
 
 extern tByte HexText[AES_SIZE * 4];
 
+void Task_Zero (void)
+{
+	tByte status;
+
+	LED_ON;
+
+	do {
+
+		status = Strobe(RF_SNOP);
+
+	} while (((status & RF_STATE) != RF_STATE_IDLE) && ((status & RF_STATE) != RF_STATE_RX) && ((status & RF_STATE) != RF_STATE_TX));
+
+	Strobe(RF_SCAL);
+
+	Strobe(RF_SRX);
+
+	do {
+
+		status = Strobe(RF_SNOP);
+
+	} while (((status & RF_STATE) != RF_STATE_IDLE) && ((status & RF_STATE) != RF_STATE_RX) && ((status & RF_STATE) != RF_STATE_TX));
+
+	LED_OFF;
+}
+
 void Schedule_Tasks (void)
 {
 	//hSCH_Add_Task(Change_Channel_Task, RADIO_CHANGE_CHANNEL_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
@@ -63,6 +88,12 @@ void Schedule_Tasks (void)
 	{
 	   	//hSCH_Add_Task(Slave_Synchronization_Task, 30, 800, CO_OP);
 	}
+}
+
+void Sync_Schedule_Tasks (void)
+{
+
+
 }
 
 void Change_Channel_Task (void)

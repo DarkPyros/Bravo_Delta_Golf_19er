@@ -12,6 +12,8 @@
 
 #include "hSCH430.h"
 
+static volatile tByte Tick_Counter = 0;
+
 /*------------------------------------------------------------------*-
 
   hSCH_Init_P1_1()
@@ -72,6 +74,11 @@ void hSCH_Start(void)
 	__no_operation();               // For debugger
 }
 
+void hSCH_Reset_Tick_Counter(void)
+{
+	Tick_Counter = 0;
+}
+
 /*------------------------------------------------------------------*-
 
   hSCH_Update
@@ -87,7 +94,6 @@ void hSCH_Start(void)
 __interrupt void hSCH_Update(void)
 {
 	tByte Index;
-	static volatile tByte Tick_Counter = 0;
 
 	if (Tick_Counter == 0)
 		RED_LED_ON;

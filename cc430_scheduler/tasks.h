@@ -22,7 +22,9 @@ typedef enum { RECEIVE, TRANSMIT } MODE;
 typedef enum { MASTER, SLAVE } ROLE;
 typedef enum { SYNCED, SYNC_LOST } SYNC;
 
+void Task_Zero (void);
 void Schedule_Tasks (void);
+void Sync_Schedule_Tasks (void);
 void Change_Channel_Task (void);
 void Task_Manager (void);
 void Start_Synchronization_Task (void);

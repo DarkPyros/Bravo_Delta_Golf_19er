@@ -223,22 +223,22 @@ void Flags_Init (void)
 	P3SEL &= ~(BIT7);
 	P3OUT &= ~(BIT7);
 
-	FLAG_PORT_DIR |= RECORD_FLAG + PLAYBACK_FLAG;
-	FLAG_PORT_SEL &= ~(RECORD_FLAG + PLAYBACK_FLAG);
+	FLAG_PORT_DIR |= RECORD_FLAG + PLAYBACK_FLAG + START_FLAG;
+	FLAG_PORT_SEL &= ~(RECORD_FLAG + PLAYBACK_FLAG + START_FLAG);
 }
 
 /*------------------------------------------------------------------*-
 
-  Flags_Pulled_High()
+  Set_Start_Flag()
 
-  Pull both flag pins low to signal to the dsPIC that we are
+  Pull the start flag high to signal to the dsPIC that we are
   ready to receive timer ticks. This should be called after
   interrupts have been enabled.
 
 -*------------------------------------------------------------------*/
-void Flags_Pulled_High (void)
+void Set_Start_Flag (void)
 {
-	FLAG_PORT |= RECORD_FLAG + PLAYBACK_FLAG;
+	FLAG_PORT |= START_FLAG;
 }
 
 /*------------------------------------------------------------------*-

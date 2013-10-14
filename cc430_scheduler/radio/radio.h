@@ -12,6 +12,8 @@
 #include "../main.h"
 #include "../RF1A/RF1A.h"
 #include "../hSCH/hSCH.h"
+#include "../rng/rng.h"
+#include "../tasks.h"
 
 // Radio configuration defines
 #define PACKET_LEN			(0x15)	    	// PACKET_LEN <= 61

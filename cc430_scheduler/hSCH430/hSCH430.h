@@ -16,6 +16,7 @@
 
 void hSCH_Init(void);
 void hSCH_Start(void);
+void hSCH_Reset_Tick_Counter(void);
 
 // hSCH430.C also includes the Port 1 ISR setup as
 // the timer tick source.

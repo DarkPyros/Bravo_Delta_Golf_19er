@@ -105,12 +105,12 @@ void Update_Nonce (void)
 	Nonce_Timer_Reset();
 }
 
-void Overwrite_Nonce (tByte const * const New_Nonce, tByte size)
+void Overwrite_Nonce (tByte const * const New_Nonce)
 {
 	tByte i;
 	tByte * nonce = RNG_Get_Nonce();
 
-	for (i = 0; i < size; i++)
+	for (i = 0; i < AES_SIZE; i++)
 	{
 		nonce[i] = New_Nonce[i];
 	}
