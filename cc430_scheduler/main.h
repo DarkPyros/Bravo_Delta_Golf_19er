@@ -52,6 +52,11 @@
 #define TEXT_HEX
 //#define DEBUG
 
+// Transmit button port
+#define TX (BIT7)
+#define TX_BUTTON P1OUT
+#define TX_BUTTON_PRESSED (TX_BUTTON & TX)
+
 // Defines for setting the flag output port and pins
 // for signaling the dsPIC as to what to do next.
 #define RECORD_FLAG (BIT0)
