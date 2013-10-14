@@ -53,7 +53,7 @@ void Schedule_Tasks (void)
 {
 	//hSCH_Add_Task(Change_Channel_Task, RADIO_CHANGE_CHANNEL_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 	//hSCH_Add_Task(Get_Next_Channel_Task, RNG_GET_RAND_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-	hSCH_Add_Task(Start_Synchronization_Task, 2, (TICKS_PER_FRAME - 1), CO_OP);
+	hSCH_Add_Task(Start_Synchronization_Task, START_SYNC_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 	//hSCH_Add_Task(Encrypt_Data_Task, ENCRYPT_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 	//hSCH_Add_Task(UART_Send_Task, UART_SEND_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 	hSCH_Add_Task(Task_Manager, TASK_MANAGER_DELAY, (TICKS_PER_FRAME - 1), CO_OP);

@@ -225,21 +225,20 @@ void Flags_Init (void)
 
 	FLAG_PORT_DIR |= RECORD_FLAG + PLAYBACK_FLAG;
 	FLAG_PORT_SEL &= ~(RECORD_FLAG + PLAYBACK_FLAG);
-	FLAG_PORT |= RECORD_FLAG + PLAYBACK_FLAG;
 }
 
 /*------------------------------------------------------------------*-
 
-  Flags_Pulled_Low()
+  Flags_Pulled_High()
 
   Pull both flag pins low to signal to the dsPIC that we are
   ready to receive timer ticks. This should be called after
   interrupts have been enabled.
 
 -*------------------------------------------------------------------*/
-void Flags_Pulled_Low (void)
+void Flags_Pulled_High (void)
 {
-	FLAG_PORT = FLAG_PORT & ~(RECORD_FLAG + PLAYBACK_FLAG);
+	FLAG_PORT |= RECORD_FLAG + PLAYBACK_FLAG;
 }
 
 /*------------------------------------------------------------------*-

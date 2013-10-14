@@ -55,7 +55,9 @@
 // Defines for setting the flag output port and pins
 // for signaling the dsPIC as to what to do next.
 #define RECORD_FLAG (BIT0)
+#define START_FLAG (BIT1)
 #define PLAYBACK_FLAG (BIT2)
+#define IDLE_FLAG ~(RECORD_FLAG + PLAYBACK_FLAG)
 #define FLAG_PORT_DIR P3DIR
 #define FLAG_PORT_SEL P3SEL
 #define FLAG_PORT P3OUT

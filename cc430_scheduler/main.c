@@ -41,7 +41,7 @@ void main(void) {
     hSCH_Start();
 
     // Tell dsPIC we're ready for the timer tick
-    Flags_Pulled_Low();
+    Flags_Pulled_High();
 
     while (1)
     {
