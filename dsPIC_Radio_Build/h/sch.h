@@ -3,9 +3,6 @@
 
 /******* Public data type declarations *******/
 
-/* Store in DATA area, if possible, for rapid access 
- * Total memory per task is 7 bytes
- */
 typedef struct tagsTask
 {
 	/* Pointer to the task (must be a 'void (void)' function) */
@@ -35,7 +32,9 @@ int  SCH_addTask(void (*)(), int, int, int);
 void SCH_deleteTask(int);
 void SCH_update();
 void SCH_start();
+void SCH_reportStatus();
 void SCH_goToSleep();
+void SCH_checkRadioSyncingFlag();
 
 /******* Public Constants *******/
 /* The maximum number of tasks required at any one time

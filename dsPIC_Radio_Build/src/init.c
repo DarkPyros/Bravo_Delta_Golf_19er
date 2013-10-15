@@ -19,10 +19,12 @@ void INIT_init(void) {
 /* Initialization of dsPIC ports*/
 void INIT_portInit(void) {
 
-	/* Initialize PortB pins as inputs for mode selection */
-	PLAYBACK_TRIS = 1;
-	RECORD_TRIS   = 1;
-	
+	/* Initialize PortB pins as inputs for mode selection
+	 * and start flag*/
+	PLAYBACK_TRIS 	= 1;
+	RECORD_TRIS   	= 1;
+	START_FLAG_TRIS	= 1;
+
 	/* Initialize the board LED and switch ports	
 	 * and turn all LEDS off. */
 	 

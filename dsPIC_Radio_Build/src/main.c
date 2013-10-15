@@ -223,25 +223,24 @@ int main(void) {
 	SFMInit(flashMemoryBuffer);
 #endif
 
-	/* A startup, the first pre-emptive tasks is placed in 
+	/* At start-up, the first pre-emptive tasks is placed in 
 	 * location 0 to ensure they will always execute as quickly
 	 * as possible.
+	 *
+	 * One is added to the  delay time for TASKS_modeSelect
+	 * because it is being added outside the normal task
+	 * scheduler
 	 */
-	SCH_addTask(WM8510IdleSampling, DELAY_PLAYBACK_SAMPLING, 0, PRE_EMPTIVE);
-	SCH_addTask(TASKS_modeSelect, 	DELAY_MODE_SELECT, FRAME_PERIOD, CO_OP);
+	SCH_addTask(WM8510IdleSampling, DELAY_IDLE_SAMPLING, 	 0, PRE_EMPTIVE);
+	SCH_addTask(TASKS_modeSelect, 	(DELAY_MODE_SELECT), FRAME_PERIOD, CO_OP);
 	
 	/* After initialization, wait until CC430 pulls both
      * mode flags LOW.
 	 */
-	#if defined TIMING_TEST
-		TIMING_PULSE_TRIS = 0;
-		TIMING_PULSE_PIN = 0;
-
-		modeFlag = IDLE;
-		while((CheckSwitchS1()) == 0);
-
+	#if defined STANDALONE_TEST
+		while( CheckSwitchS1()==0 && CheckSwitchS2()==0 );
 	#else
-		while( (PLAYBACK_FLAG || RECORD_FLAG) );
+		while( START_FLAG_PIN == 0 );
 	#endif
 
 	/* Once the CC430 signals it is ready, start the scheduler

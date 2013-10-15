@@ -8,11 +8,11 @@
 #define 	USE_SFM_CHIP
 /* Uncomment to remove SPI buffer while loop */
 //#define 	NO_WAIT_FOR_SPI
-/* Uncomment to remove Packing and Unpacking of
- * encoded samples
- */
+/* Uncomment to enable LED error reporting */
+//#define 	SCH_REPORT_ERRORS
 
-#define 	TIMING_TEST
+#define 	STANDALONE_TEST
+//#define 	TIMING_TEST
 //#define 	TIMING_SCH_UPDATE
 //#define 	TIMING_MODE_SELECT
 //#define 	TIMING_ENCODE_DATA

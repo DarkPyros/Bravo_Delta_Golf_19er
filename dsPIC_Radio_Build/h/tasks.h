@@ -14,22 +14,29 @@ extern enum modes	currentMode;
 extern int transceiverReady;
 
 /******* Public Constants *******/
-/* Task delay times*/
+/*   Task delay times
+ * If tasks are added after scheduler begins, the
+ * task will run (delay value + 1) ticks after
+ * being added */
+#define DELAY_IDLE_SAMPLING			0
+
 #define	DELAY_PLAYBACK_SAMPLING		0
-#define	DELAY_READ_SPI				25
-#define DELAY_DECODE_DATA			26
-#define	DELAY_WRITE_CODEC			78
+#define	DELAY_READ_SPI				2
+#define DELAY_DECODE_DATA			21
+#define	DELAY_WRITE_CODEC			91
 
 #define	DELAY_RECORD_SAMPLING		0
-#define	DELAY_READ_CODEC			158
-#define	DELAY_ENCODE_DATA			160
-#define DELAY_WRITE_SPI				185
+#define	DELAY_READ_CODEC			91
+#define	DELAY_ENCODE_DATA			101
+#define DELAY_WRITE_SPI				162
 
-#define	DELAY_MODE_SELECT	0
-#define DELAY_CHANGE_CODEC_SAMPLING		78
+#define	DELAY_MODE_SELECT	67
+#define DELAY_CHANGE_CODEC_SAMPLING		11
 
-/* The number of timer ticks in each period.
- * This value is equal to the number of audio samples.
+/* FRAME_PERIOD is one less than the number of timer
+ * ticks in each period for zero based index. The
+ * number of timer ticks is equal to the number of
+ * audio samples per frame.
  */
 #define FRAME_PERIOD	79
 
@@ -44,8 +51,8 @@ void TASKS_writeCodec();
 void TASKS_writeToSPI();
 void TASKS_readFromSPI();
 
-void TASKS_playbackSpeechSegment();
-void TASKS_recordSpeechSegment();
+void TASKS_readSFM();
+void TASKS_writeSFM();
 
 #endif
 /******* End of File *******/

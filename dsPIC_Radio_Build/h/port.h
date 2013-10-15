@@ -8,8 +8,11 @@
 #define PLAYBACK_FLAG	_LATB6
 #define RECORD_FLAG		_LATB7
 
+#define START_FLAG_TRIS	_TRISB2
+#define	START_FLAG_PIN	_LATB2
+
 /* Active mode for mode signal pins is LOW logic*/
-#define ACTIVE_MODE		0
+#define ACTIVE_MODE		1
 
 
 #if defined USE_SFM_CHIP
@@ -24,8 +27,8 @@
 #endif
 
 #if defined TIMING_TEST
-#define 	TIMING_PULSE_TRIS	_TRISB2
-#define 	TIMING_PULSE_PIN 	_LATB2
+	#define 	TIMING_PULSE_TRIS	_TRISC15
+	#define 	TIMING_PULSE_PIN 	_LATC15
 #endif
 
 #endif

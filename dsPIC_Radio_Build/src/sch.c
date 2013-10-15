@@ -4,7 +4,11 @@
 
 #define	SCH_UPDATE()	__attribute__((__interrupt__,no_auto_psv))
 
+#define ERROR_PORT	_LATC
+
 sTask SCH_tasks[SCH_MAX_TASKS];
+
+int	radioSyncingFlag = FALSE;
 
 void SCH_initExtTrigger() {
 #ifndef USE_SFM_CHIP	
@@ -26,68 +30,70 @@ void SCH_UPDATE() _DCIInterrupt() {
 #ifndef USE_SFM_CHIP
 		SYNC_CLK_PULSE_PIN ^= 1;
 #endif		
-		/* 12.4 microsecond sandwich delay */
-		TIMER_timer1Start(310);
-		
-		#if defined TIMING_SCH_UPDATE
-//		static int tickCounter = 0;
-		
-//		if(tickCounter == 0) {
-			TIMING_PULSE_PIN ^= 1;
-//		}
-		#endif
 
-		for(i=0; i < SCH_MAX_TASKS; i++){
+#ifndef	STANDALONE_TEST
+		SCH_checkRadioSyncingFlag();
+#endif
+		/* If CC430 is in synchronization mode the dsPIC does nothing */
+		if(!radioSyncingFlag) {
+			#if defined TIMING_SCH_UPDATE
+	//		static int tickCounter = 0;
 			
-			/* Check for task at this position */
-			if(SCH_tasks[i].pTask){
+	//		if(tickCounter == 0) {
+				TIMING_PULSE_PIN ^= 1;
+	//		}
+			#endif
+
+			for(i=0; i < SCH_MAX_TASKS; i++){
 				
-				/* Check if task is due to run */
-				if(SCH_tasks[i].Delay == 0) {
-				
-					/* If Co_op == 1, the task is co-operative 
-					 * so set RunMe flag. */
-					if(SCH_tasks[i].Co_op == 1) {
-						SCH_tasks[i].RunMe = 1;
-						
-						/* Schedule periodic tasks to run again */
-						if(SCH_tasks[i].Period) {
-							SCH_tasks[i].Delay = SCH_tasks[i].Period;
+				/* Check for task at this position */
+				if(SCH_tasks[i].pTask){
+					
+					/* Check if task is due to run */
+					if(SCH_tasks[i].Delay == 0) {
+					
+						/* If Co_op == 1, the task is co-operative 
+						 * so set RunMe flag. */
+						if(SCH_tasks[i].Co_op == 1) {
+							SCH_tasks[i].RunMe = 1;
+							
+							/* Schedule periodic tasks to run again */
+							if(SCH_tasks[i].Period) {
+								SCH_tasks[i].Delay = SCH_tasks[i].Period;
+							}
+							else {
+							}
 						}
+						/* If Co_op == 0, the task is pre-emptive 
+						 * and runs immediately. */
 						else {
-						}
+							(SCH_tasks[i].pTask)();
+							SCH_tasks[i].RunMe = 0;
+						}				
 					}
-					/* If Co_op == 0, the task is pre-emptive 
-					 * and runs immediately. */
 					else {
-						(SCH_tasks[i].pTask)();
-						SCH_tasks[i].RunMe = 0;
-					}				
+						/* Task not ready; decrement Delay */
+						SCH_tasks[i].Delay -= 1;
+					}		
 				}
 				else {
-					/* Task not ready; decrement Delay */
-					SCH_tasks[i].Delay -= 1;
-				}		
+				}
+			}
+			
+			#if defined TIMING_SCH_UPDATE
+	//		if(tickCounter == 0) {
+				TIMING_PULSE_PIN ^= 1;
+	/*		}
+			if(tickCounter >= 79) {
+				tickCounter = 0;
 			}
 			else {
+				tickCounter++;
 			}
-		}
-		
-		/* Wait for timeout and disable/clear timer */
-//		while(!_T1IF);
-		TIMER_timer1Stop();
-	
-		#if defined TIMING_SCH_UPDATE
-//		if(tickCounter == 0) {
-			TIMING_PULSE_PIN ^= 1;
-/*		}
-		if(tickCounter >= 79) {
-			tickCounter = 0;
+	*/		#endif
 		}
 		else {
-			tickCounter++;
 		}
-*/		#endif
 	}
 	else {
 	}
@@ -165,4 +171,57 @@ void SCH_goToSleep() {
 	/* Macro for placing dsPIC CPU in idle mode */
 //	Idle();
 } /* End of SCH_goToSleep() */
+
+void SCH_reportStatus() {
+	#ifdef SCH_REPORT_ERRORS
+	/* ONLY APPLIES IF WE ARE REPORTING ERRORS */
+	
+	/* Check for a new error code */
+	if (SCH_errorCode != SCH_lastErrorCode) {
+		// Negative logic on LEDs assumed
+		Error_port = 255 - Error_code_G;
+		Last_error_code_G = Error_code_G;
+		
+		if (Error_code_G != 0) {
+		Error_tick_count_G = 60000;
+		}
+		else {
+		Error_tick_count_G = 0;
+		}
+	}
+	else {
+		if (Error_tick_count_G != 0) {
+			if (--Error_tick_count_G == 0) {
+			Error_code_G = 0; // Reset error code
+			}
+		}
+	}
+	#endif
+}
+
+void SCH_checkRadioSyncingFlag() {
+	int i;
+
+	/* Check to see if CC430 is currently in synchronization mode. */
+	if(START_FLAG_PIN == 0) {
+		/* If CC430 is syncing, set radio sync flag and delete all tasks.*/
+		radioSyncingFlag = TRUE;
+		
+		for(i=0; i < SCH_MAX_TASKS; i++) {
+			SCH_deleteTask(i);
+		}
+	}
+	else {
+		/* CC430 is now synchronized. Add sampling and mode select tasks
+		 * Unset radio sync flag to begin operating again.*/
+		if(radioSyncingFlag == TRUE) {
+			SCH_addTask(WM8510IdleSampling, DELAY_PLAYBACK_SAMPLING, 0, PRE_EMPTIVE);
+			SCH_addTask(TASKS_modeSelect, (DELAY_MODE_SELECT + 1), FRAME_PERIOD, CO_OP);
+			
+			radioSyncingFlag = FALSE;
+		}
+		else {
+		}
+	}
+}
 /******* End of File *******/
