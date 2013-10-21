@@ -132,6 +132,12 @@ tByte Radio_Read_RX_FIFO(tByte * const RX_Buffer, tByte size)
 
 		return RX_Buffer_Length;
 	}
+	else if (RX_Buffer_Length != 0)
+	{
+		Strobe(RF_SFRX);
+
+		return 0xFF;
+	}
 	else
 	{
 		return 0;

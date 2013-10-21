@@ -47,6 +47,9 @@
 // Audio frame size in bytes
 #define AUDIO_FRAME_SIZE (20)
 
+// Transmit button switch debounce threshold
+#define SW_THRES	(3)
+
 // UART debugging defines
 //#define TEXT_BINARY
 #define TEXT_HEX
