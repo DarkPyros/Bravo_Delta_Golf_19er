@@ -51,7 +51,7 @@ const RF_SETTINGS rfSettings = {
     0x13,   // MDMCFG2   Modem Configuration
     0x22,   // MDMCFG1   Modem configuration.
     0xF8,   // MDMCFG0   Modem configuration.
-    0x00,   // CHANNR    Channel number.
+    0x3F,   // CHANNR    Channel number.
     0x45,   // DEVIATN   Modem Deviation Setting
     0x56,   // FREND1    Front end RX configuration.
     0x10,   // FREND0    Front end TX configuration.
@@ -110,7 +110,7 @@ void Radio_Init (void)
 	Strobe(RF_SIDLE);
 }
 
-void Radio_Read_RX_FIFO(tByte * const RX_Buffer, tByte size)
+tByte Radio_Read_RX_FIFO(tByte * const RX_Buffer, tByte size)
 {
 	tByte RX_Buffer_Length;
 
@@ -129,6 +129,12 @@ void Radio_Read_RX_FIFO(tByte * const RX_Buffer, tByte size)
 		{
 			Error_code_G = ERROR_RADIO_RX_CRC_BAD;
 		}
+
+		return RX_Buffer_Length;
+	}
+	else
+	{
+		return 0;
 	}
 }
 
@@ -214,6 +220,8 @@ __interrupt void CC1101_ISR(void)
           Sync_Schedule_Tasks();
 
           Radio_Disable_RX_Interrupt();
+
+
 
 
 

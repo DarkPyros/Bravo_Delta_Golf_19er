@@ -13,10 +13,17 @@
 
 #define RADIO_CHANGE_CHANNEL_DELAY	(0)
 #define RNG_GET_RAND_TASK_DELAY		(1)
+#define DECRYPT_DATA_TASK_DELAY		(1)
 #define START_SYNC_TASK_DELAY		(2)
-#define ENCRYPT_DATA_TASK_DELAY		(5)
+#define SPI_SEND_TASK_DELAY			(4)
 #define UART_SEND_DATA_TASK_DELAY	(6)
+#define RECEIVING_MODE_TASK_DELAY	(8)
+#define POLL_TRANSMIT_TASK_DELAY	(20)
+#define READ_RX_FIFO_TASK_DELAY		(46)
 #define TASK_MANAGER_DELAY			(79)
+#define SPI_RECEIVE_TASK_DELAY		(210)
+#define	ENCRYPT_DATA_TASK_DELAY		(246)
+#define	TRANSMIT_DATA_TASK_DELAY	(268)
 
 typedef enum { RECEIVE, TRANSMIT } MODE;
 typedef enum { MASTER, SLAVE } ROLE;
@@ -34,5 +41,10 @@ void Encrypt_Data_Task (void);
 void SPI_Send_Task (void);
 void SPI_Receive_Task (void);
 void UART_Send_Task (void);
+void Poll_Transmit_Button_Task (void);
+void Transmit_Data_Task (void);
+void Receiving_Mode_Task (void);
+void Read_RX_FIFO_Task (void);
+void Decrypt_Data_Task (void);
 
 #endif /* TASKS_H_ */

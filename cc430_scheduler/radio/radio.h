@@ -39,7 +39,7 @@
 #define RF_READY				(0x80)
 
 void Radio_Init (void);
-void Radio_Read_RX_FIFO(tByte * const, tByte);
+tByte Radio_Read_RX_FIFO(tByte * const, tByte);
 void Radio_Transmit (tByte const * const, tByte);
 void Radio_Receive_On (void);
 void Radio_Receive_Off (void);
