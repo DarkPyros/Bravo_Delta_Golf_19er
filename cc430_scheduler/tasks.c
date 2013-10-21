@@ -249,32 +249,35 @@ void Task_Manager (void)
 
 void Poll_Transmit_Button_Task (void)
 {
-	if(TX_BUTTON_PRESSED)
-	{
-		FLAG_PORT &= ~(PLAYBACK_FLAG);
-		FLAG_PORT |= (RECORD_FLAG);
-		Mode_Flag_G = TRANSMIT;
+	static tByte Duration;
 
-		hSCH_Add_Task(SPI_Receive_Task, (SPI_RECEIVE_TASK_DELAY - 1), 0, CO_OP);
-		hSCH_Add_Task(Encrypt_Data_Task, (ENCRYPT_DATA_TASK_DELAY - 1), 0, CO_OP);
-		hSCH_Add_Task(Transmit_Data_Task, (TRANSMIT_DATA_TASK_DELAY - 1), 0, CO_OP);
+	if (TX_BUTTON_PRESSED)
+	{
+		Duration += 1;
+		if (Duration > SW_THRES)
+		{
+			Duration = SW_THRES;
+			FLAG_PORT &= ~(PLAYBACK_FLAG);
+			FLAG_PORT |= (RECORD_FLAG);
+			Mode_Flag_G = TRANSMIT;
+
+			hSCH_Add_Task(SPI_Receive_Task, (SPI_RECEIVE_TASK_DELAY - 1), 0, CO_OP);
+			hSCH_Add_Task(Encrypt_Data_Task, (ENCRYPT_DATA_TASK_DELAY - 1), 0, CO_OP);
+			hSCH_Add_Task(Transmit_Data_Task, (TRANSMIT_DATA_TASK_DELAY - 1), 0, CO_OP);
+			return;
+		}
+		// Switch pressed, but not yet for long enough
+		return;
 	}
+	// Switch not pressed - reset the count
 	else
 	{
+		Duration = 0;
 		FLAG_PORT &= ~(RECORD_FLAG + PLAYBACK_FLAG);
 		Mode_Flag_G = RECEIVE;
 
 		hSCH_Add_Task(Receiving_Mode_Task, (RECEIVING_MODE_TASK_DELAY -1), 0, CO_OP);
-		hSCH_Add_Task(Read_RX_FIFO_Task, (READ_RX_FIFO_TASK_DELAY -1), 0, CO_OP);
-
-		if(ReadSingleReg( RXBYTES )) //If Fifo is not empty? which variable / where to look
-		{
-			hSCH_Add_Task(Read_RX_FIFO_Task, (READ_RX_FIFO_TASK_DELAY -1), 0, CO_OP);
-			hSCH_Add_Task(SPI_Send_Task, (SPI_SEND_TASK_DELAY - 1), 0, CO_OP);
-			FLAG_PORT &= ~(RECORD_FLAG);
-			FLAG_PORT |= (PLAYBACK_FLAG);
-		}
-
+		hSCH_Add_Task(Check_RX_Data_Task, (CHECK_RX_DATA_TASK_DELAY -1), 0, CO_OP);
 	}
 }
 
@@ -285,12 +288,21 @@ void Transmit_Data_Task (void)
 
 void Receiving_Mode_Task (void)
 {
-
+	Radio_Receive_On();
 }
-void Read_RX_FIFO_Task (void)
+
+void Check_RX_Data_Task (void)
 {
-
+	tByte RX_FIFO_SIZE = Radio_Read_RX_FIFO(Radio_Data_Packet_Buffer, sizeof(Radio_Data_Packet_Buffer));
+	if((RX_FIFO_SIZE > 0) && (RX_FIFO_SIZE != 0xFF))
+	{
+		hSCH_Add_Task(Decrypt_Data_Task, (DECRYPT_DATA_TASK_DELAY -1), 0, CO_OP);
+		hSCH_Add_Task(SPI_Send_Task, (SPI_SEND_TASK_DELAY - 1), 0, CO_OP);
+		FLAG_PORT &= ~(RECORD_FLAG);
+		FLAG_PORT |= (PLAYBACK_FLAG);
+	}
 }
+
 void Decrypt_Data_Task (void)
 {
 

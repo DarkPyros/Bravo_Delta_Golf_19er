@@ -19,7 +19,7 @@
 #define UART_SEND_DATA_TASK_DELAY	(6)
 #define RECEIVING_MODE_TASK_DELAY	(8)
 #define POLL_TRANSMIT_TASK_DELAY	(20)
-#define READ_RX_FIFO_TASK_DELAY		(46)
+#define CHECK_RX_DATA_TASK_DELAY	(46)
 #define TASK_MANAGER_DELAY			(79)
 #define SPI_RECEIVE_TASK_DELAY		(210)
 #define	ENCRYPT_DATA_TASK_DELAY		(246)
@@ -44,7 +44,7 @@ void UART_Send_Task (void);
 void Poll_Transmit_Button_Task (void);
 void Transmit_Data_Task (void);
 void Receiving_Mode_Task (void);
-void Read_RX_FIFO_Task (void);
+void Check_RX_Data_Task (void);
 void Decrypt_Data_Task (void);
 
 #endif /* TASKS_H_ */
