@@ -11,11 +11,17 @@
 #include "../main.h"
 #include <stdlib.h>
 
-void UART_Init(void);
-void UART_TX(tByte const);
-tByte UART_TX_Busy (void);
-void Convert_To_ASCII_Binary(tByte const * const, tByte * const, tByte const);
-void Convert_To_ASCII_Hex(tByte const * const, tByte * const, tByte const);
-void Byte_Reverse(tByte * const, tByte const);
+#define UART_BAUD_RATE		(115200)
+#define UART_BUFFER_SIZE 	(37)
+
+#define UART_TX_FLAG_DOWN (0)
+#define UART_TX_FLAG_UP   (1)
+
+void UART_Init (void);
+void UART_TX (void);
+void UART_TX_Buffer_Write (tByte const *, tByte);
+void Convert_To_ASCII_Binary (tByte const * const, tByte * const, tByte const);
+void Convert_To_ASCII_Hex (tByte const * const, tByte * const, tByte const);
+void Byte_Reverse (tByte * const, tByte const);
 
 #endif /* UART_H_ */

@@ -203,9 +203,6 @@ __interrupt void CC1101_ISR(void)
         RxBufferLength = ReadSingleReg( RXBYTES );
         ReadBurstReg(RF_RXFIFORD, Radio_RX_Buffer, RxBufferLength);
 
-        //if (RxBufferLength < 10)
-        	LED_ON;
-
         // Stop here to see contents of RxBuffer
         __no_operation();
 
@@ -227,7 +224,7 @@ __interrupt void CC1101_ISR(void)
           // (because the task array is empty)
           Error_code_G = 0;
 
-          Overwrite_Nonce(&(Radio_RX_Buffer[1]));
+          Overwrite_Nonce((tNONCE *)&(Radio_RX_Buffer[1]));
 
           Sync_Schedule_Tasks();
 

@@ -18,8 +18,8 @@
 MODE Mode_Flag_G = RECEIVE;
 SYNC Sync_Flag_G = SYNC_LOST;
 
-//ROLE Role_Flag_G = MASTER;
-ROLE Role_Flag_G = SLAVE;
+ROLE Role_Flag_G = MASTER;
+//ROLE Role_Flag_G = SLAVE;
 
 //static tByte Next_Channel = 0;
 tByte Next_Channel = 0;
@@ -95,6 +95,7 @@ void Schedule_Tasks (void)
 		hSCH_Add_Task(Start_Synchronization_Task, START_SYNC_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 		//hSCH_Add_Task(Encrypt_Data_Task, ENCRYPT_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 		//hSCH_Add_Task(UART_Send_Task, UART_SEND_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+		hSCH_Add_Task(UART_Send_Task, UART_SEND_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 		hSCH_Add_Task(Poll_Transmit_Button_Task, POLL_TRANSMIT_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 		hSCH_Add_Task(Task_Manager, TASK_MANAGER_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 	}
@@ -111,6 +112,7 @@ void Sync_Schedule_Tasks (void)
 	hSCH_Add_Task(Task_Zero, (RAISE_START_FLAG_TASK_DELAY + TASK_ZERO_DELAY), (TICKS_PER_FRAME - 1), CO_OP);
 	hSCH_Add_Task(Poll_Transmit_Button_Task, (RAISE_START_FLAG_TASK_DELAY + POLL_TRANSMIT_TASK_DELAY), (TICKS_PER_FRAME - 1), CO_OP);
 	hSCH_Add_Task(Task_Manager, (RAISE_START_FLAG_TASK_DELAY + TASK_MANAGER_DELAY), (TICKS_PER_FRAME - 1), CO_OP);
+	hSCH_Add_Task(UART_Send_Task, UART_SEND_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 
 	hSCH_Add_Task(Slave_Synchronization_Task, (RAISE_START_FLAG_TASK_DELAY + SLAVE_SYNC_TASK_DELAY), (TICKS_PER_FRAME - 1), CO_OP);
 }
@@ -161,10 +163,29 @@ void Change_Channel_Task (void)
 
 void Start_Synchronization_Task (void)
 {
+	tByte i;
+	tWord Counter_Delta;
+
 	if (Role_Flag_G == MASTER)
 	{
-		tByte * Nonce_Info = RNG_Get_Nonce();
-		Radio_Transmit(Nonce_Info, AES_SIZE);
+		Counter_Delta = Update_Nonce();
+
+		tByte * Nonce_Ptr = RNG_Get_Nonce();
+
+		Radio_Data_Packet_Buffer[0] = AES_SIZE;
+
+		for (i = 1; i < AES_SIZE + 1; i++)
+		{
+			Radio_Data_Packet_Buffer[i] = Nonce_Ptr[i - 1];
+		}
+
+		Radio_Transmit(Radio_Data_Packet_Buffer, (AES_SIZE + 1));
+
+		Convert_To_ASCII_Hex((tByte *) &Counter_Delta, HexText, sizeof(Counter_Delta));
+
+		//Byte_Reverse(HexText, ((AES_SIZE + 1) << 1));
+
+		UART_TX_Buffer_Write(HexText, (sizeof(Counter_Delta) << 1));
 	}
 	else // Sync_Flag_G == SYNCED or SYNC_LOST
 	{
@@ -177,16 +198,18 @@ void Slave_Synchronization_Task (void)
 	tByte Sync_Result;
 	static tByte Sync_Counter = 0;
 
-	Sync_Result = Radio_Read_RX_FIFO(Sync_Info, sizeof(Sync_Info));
+	Sync_Result = Radio_Read_RX_FIFO(Radio_Data_Packet_Buffer, (AES_SIZE + 3));
 
-	if (Sync_Result != AES_SIZE)
+	if (Sync_Result != (AES_SIZE + 3))
+	{
 		Sync_Counter++;
+	}
 	else
 	{
 		Sync_Counter = 0;
 		Sync_Flag_G = SYNCED;
 
-		Overwrite_Nonce(Sync_Info);
+		Overwrite_Nonce((tNONCE *)&(Radio_Data_Packet_Buffer[1]));
 
 
 	}
@@ -249,30 +272,11 @@ void SPI_Receive_Task (void)
 
 void UART_Send_Task (void)
 {
-	static tByte UART_Index = 0;
-	static tByte UART_Convert = FALSE;
+	//RED_LED_ON;
 
-	RED_LED_ON;
+	UART_TX();
 
-	if ((UART_Index == 0) && (UART_Convert == FALSE))
-	{
-		UART_Convert = TRUE;
-		Convert_To_ASCII_Hex(Radio_Data_Packet_Buffer, HexText, sizeof(Radio_Data_Packet_Buffer));
-		//Byte_Reverse(HexText, sizeof(HexText));
-	}
-
-	if (UART_TX_Busy() == FALSE)
-	{
-		UART_TX(HexText[UART_Index++]);
-
-		if (UART_Index >= sizeof(HexText))
-		{
-			UART_Index = 0;
-			UART_Convert = FALSE;
-		}
-	}
-
-	RED_LED_OFF;
+	//RED_LED_OFF;
 }
 
 void Task_Manager (void)

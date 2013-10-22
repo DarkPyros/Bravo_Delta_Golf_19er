@@ -84,7 +84,7 @@ void Nonce_Init (void)
 	Nonce.counter = 0xAAAAAAAAAAAAAAAALL;
 }
 
-void Update_Nonce (void)
+tWord Update_Nonce (void)
 {
 	tWord timer;
 
@@ -103,17 +103,29 @@ void Update_Nonce (void)
 	Nonce.counter += timer;
 
 	Nonce_Timer_Reset();
+
+	return timer;
 }
 
-void Overwrite_Nonce (tByte const * const New_Nonce)
+void Overwrite_Nonce (tNONCE * New_Nonce)
 {
-	tByte i;
-	tByte * nonce = RNG_Get_Nonce();
+	tWord timer;
 
-	for (i = 0; i < AES_SIZE; i++)
+	Nonce.year = New_Nonce -> year;
+	Nonce.month = New_Nonce -> month;
+	Nonce.day = New_Nonce -> day;
+	Nonce.hour = New_Nonce -> hour;
+	Nonce.minute = New_Nonce -> minute;
+	Nonce.second = New_Nonce -> second;
+
+	do
 	{
-		nonce[i] = New_Nonce[i];
-	}
+		timer = TA1R;
+	} while (timer != TA1R);
+
+	Nonce.counter += timer + New_Nonce -> counter;
+
+	Nonce_Timer_Reset();
 }
 
 /*------------------------------------------------------------------*-
