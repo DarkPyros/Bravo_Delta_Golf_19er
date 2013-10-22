@@ -76,13 +76,15 @@ const RF_SETTINGS rfSettings = {
     0x47,   // FIFOTHR   RXFIFO and TXFIFO thresholds.
     0x29,   // IOCFG2    GDO2 output pin configuration.
     0x06,   // IOCFG0    GDO0 output pin configuration. Refer to SmartRF® Studio User Manual for detailed pseudo register explanation.
-    0x04,   // PKTCTRL1  Packet automation control.
+    0x0C,   // PKTCTRL1  Packet automation control.
     0x05,   // PKTCTRL0  Packet automation control.
     0x00,   // ADDR      Device address.
     PACKET_LEN // PKTLEN    Packet length.
 };
 
 tByte Radio_RX_Buffer[PACKET_LEN+2];
+
+extern SYNC Sync_Flag_G;
 
 void Radio_Init (void)
 {
@@ -117,7 +119,7 @@ tByte Radio_Read_RX_FIFO(tByte * const RX_Buffer, tByte size)
 	// Read the length byte from the FIFO
 	RX_Buffer_Length = ReadSingleReg( RXBYTES );
 
-	if (RX_Buffer_Length == size)
+	if (RX_Buffer_Length == (size + 2))
 	{
 		ReadBurstReg(RF_RXFIFORD, RX_Buffer, RX_Buffer_Length);
 
@@ -201,15 +203,19 @@ __interrupt void CC1101_ISR(void)
         RxBufferLength = ReadSingleReg( RXBYTES );
         ReadBurstReg(RF_RXFIFORD, Radio_RX_Buffer, RxBufferLength);
 
+        //if (RxBufferLength < 10)
+        	LED_ON;
+
         // Stop here to see contents of RxBuffer
         __no_operation();
 
         // Check the CRC results
         if(Radio_RX_Buffer[RxBufferLength - 1] & CRC_OK)
         {
-          LED_XOR;                    		// Toggle LED1
 
           tByte i;
+
+          LED_ON;                    		// Toggle LED1
 
           for (i = 0; i < hSCH_MAX_TASKS; i++)
           {
@@ -227,11 +233,17 @@ __interrupt void CC1101_ISR(void)
 
           Radio_Disable_RX_Interrupt();
 
+          Sync_Flag_G = SYNCED;
 
+          // Lower start flag in order to keep dsPIC
+          // in sync with CC430
+          //FLAG_PORT &= ~START_FLAG;
 
-
-
-
+          //LED_OFF;
+        }
+        else
+        {
+        	Strobe (RF_SFRX);
         }
       break;
     case 22: break;                         // RFIFG10

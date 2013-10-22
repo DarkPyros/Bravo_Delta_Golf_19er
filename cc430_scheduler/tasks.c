@@ -13,12 +13,13 @@
 #include "./radio/radio.h"
 #include "./AES/aes.h"
 #include "./UART/uart.h"
+#include "../hSCH430/hSCH430.h"
 
 MODE Mode_Flag_G = RECEIVE;
 SYNC Sync_Flag_G = SYNC_LOST;
 
-ROLE Role_Flag_G = MASTER;
-//ROLE Role_Flag_G = SLAVE;
+//ROLE Role_Flag_G = MASTER;
+ROLE Role_Flag_G = SLAVE;
 
 //static tByte Next_Channel = 0;
 tByte Next_Channel = 0;
@@ -33,10 +34,10 @@ tByte Sync_Info[AES_SIZE] = { 0x00, 0x00, 0x00, 0x00,
 							  0x00, 0x00, 0x00, 0x00,
 							  0x00, 0x00, 0x00, 0x00 };
 
-tByte AES_Encrypt_Buffer[AES_SIZE] = { 0x00, 0x00, 0x00, 0x00,
-									   0x00, 0x00, 0x00, 0x00,
-									   0x00, 0x00, 0x00, 0x00,
-									   0x00, 0x00, 0x00, 0x00 };
+tByte AES_Crypto_Buffer[AES_SIZE] = { 0x00, 0x00, 0x00, 0x00,
+									  0x00, 0x00, 0x00, 0x00,
+									  0x00, 0x00, 0x00, 0x00,
+									  0x00, 0x00, 0x00, 0x00 };
 
 tByte Radio_Data_Packet_Buffer[AES_SIZE * 2] = { 0x00, 0x00, 0x00, 0x00,
 										         0x00, 0x00, 0x00, 0x00,
@@ -53,7 +54,7 @@ void Task_Zero (void)
 {
 	tByte status;
 
-	LED_ON;
+	//LED_ON;
 
 	do {
 
@@ -61,40 +62,63 @@ void Task_Zero (void)
 
 	} while (((status & RF_STATE) != RF_STATE_IDLE) && ((status & RF_STATE) != RF_STATE_RX) && ((status & RF_STATE) != RF_STATE_TX));
 
-	Strobe(RF_SCAL);
+	//Strobe(RF_SCAL);
 
-	Strobe(RF_SRX);
+	if (Role_Flag_G == MASTER)
+		Strobe(RF_SIDLE);
+	else if (Sync_Flag_G == SYNC_LOST)
+	{
+		Radio_Receive_On();
+		Radio_Enable_RX_Interrupt();
+	}
+	else
+	{
+		Strobe(RF_SRX);
+	}
 
-	do {
+	//do {
 
-		status = Strobe(RF_SNOP);
+	//	status = Strobe(RF_SNOP);
 
-	} while (((status & RF_STATE) != RF_STATE_IDLE) && ((status & RF_STATE) != RF_STATE_RX) && ((status & RF_STATE) != RF_STATE_TX));
+	//} while (((status & RF_STATE) != RF_STATE_IDLE) && ((status & RF_STATE) != RF_STATE_RX) && ((status & RF_STATE) != RF_STATE_TX));
 
-	LED_OFF;
+	//LED_OFF;
 }
 
 void Schedule_Tasks (void)
 {
-	//hSCH_Add_Task(Change_Channel_Task, RADIO_CHANGE_CHANNEL_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-	//hSCH_Add_Task(Get_Next_Channel_Task, RNG_GET_RAND_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-	hSCH_Add_Task(Start_Synchronization_Task, START_SYNC_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-	//hSCH_Add_Task(Encrypt_Data_Task, ENCRYPT_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-	//hSCH_Add_Task(UART_Send_Task, UART_SEND_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-	hSCH_Add_Task(Poll_Transmit_Button_Task, POLL_TRANSMIT_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-	hSCH_Add_Task(Task_Manager, TASK_MANAGER_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
-
-
-	if (Role_Flag_G == SLAVE)
+	if (Role_Flag_G == MASTER)
 	{
-	   	//hSCH_Add_Task(Slave_Synchronization_Task, 30, 800, CO_OP);
+		//hSCH_Add_Task(Change_Channel_Task, RADIO_CHANGE_CHANNEL_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+		//hSCH_Add_Task(Get_Next_Channel_Task, RNG_GET_RAND_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+		hSCH_Add_Task(Task_Zero, TASK_ZERO_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+		hSCH_Add_Task(Start_Synchronization_Task, START_SYNC_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+		//hSCH_Add_Task(Encrypt_Data_Task, ENCRYPT_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+		//hSCH_Add_Task(UART_Send_Task, UART_SEND_DATA_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+		hSCH_Add_Task(Poll_Transmit_Button_Task, POLL_TRANSMIT_TASK_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+		hSCH_Add_Task(Task_Manager, TASK_MANAGER_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
+	}
+	else
+	{
+		hSCH_Add_Task(Task_Zero, TASK_ZERO_DELAY, (TICKS_PER_FRAME - 1), CO_OP);
 	}
 }
 
 void Sync_Schedule_Tasks (void)
 {
+	hSCH_Add_Task(Raise_Start_Flag_Task, RAISE_START_FLAG_TASK_DELAY, 0, CO_OP);
 
+	hSCH_Add_Task(Task_Zero, (RAISE_START_FLAG_TASK_DELAY + TASK_ZERO_DELAY), (TICKS_PER_FRAME - 1), CO_OP);
+	hSCH_Add_Task(Poll_Transmit_Button_Task, (RAISE_START_FLAG_TASK_DELAY + POLL_TRANSMIT_TASK_DELAY), (TICKS_PER_FRAME - 1), CO_OP);
+	hSCH_Add_Task(Task_Manager, (RAISE_START_FLAG_TASK_DELAY + TASK_MANAGER_DELAY), (TICKS_PER_FRAME - 1), CO_OP);
 
+	hSCH_Add_Task(Slave_Synchronization_Task, (RAISE_START_FLAG_TASK_DELAY + SLAVE_SYNC_TASK_DELAY), (TICKS_PER_FRAME - 1), CO_OP);
+}
+
+void Raise_Start_Flag_Task (void)
+{
+	FLAG_PORT |= START_FLAG;
+	hSCH_Reset_Tick_Counter();
 }
 
 void Change_Channel_Task (void)
@@ -139,8 +163,8 @@ void Start_Synchronization_Task (void)
 {
 	if (Role_Flag_G == MASTER)
 	{
-		tByte * Sync_Info = RNG_Get_Nonce();
-		Radio_Transmit(Sync_Info, AES_SIZE);
+		tByte * Nonce_Info = RNG_Get_Nonce();
+		Radio_Transmit(Nonce_Info, AES_SIZE);
 	}
 	else // Sync_Flag_G == SYNCED or SYNC_LOST
 	{
@@ -150,17 +174,27 @@ void Start_Synchronization_Task (void)
 
 void Slave_Synchronization_Task (void)
 {
+	tByte Sync_Result;
 	static tByte Sync_Counter = 0;
 
-	if (Sync_Flag_G == SYNCED)
-	{
-		Radio_Read_RX_FIFO((tByte *)&Sync_Info, AES_SIZE);
+	Sync_Result = Radio_Read_RX_FIFO(Sync_Info, sizeof(Sync_Info));
 
-	}
+	if (Sync_Result != AES_SIZE)
+		Sync_Counter++;
 	else
 	{
-		Sync_Counter++;
+		Sync_Counter = 0;
+		Sync_Flag_G = SYNCED;
 
+		Overwrite_Nonce(Sync_Info);
+
+
+	}
+
+	if (Sync_Counter >= SYNC_LOST_THRESHOLD)
+	{
+		Sync_Counter = SYNC_LOST_THRESHOLD;
+		Sync_Flag_G = SYNC_LOST;
 	}
 }
 
@@ -179,22 +213,22 @@ void Encrypt_Data_Task (void)
 
 	for (i = 0; i < AES_SIZE; i++)
 	{
-		AES_Encrypt_Buffer[i] = SPI_Buffer[i];
+		AES_Crypto_Buffer[i] = SPI_Buffer[i];
 	}
 
-	AES_Encrypt_Data(AES_ADDR, AES_Encrypt_Buffer, Radio_Data_Packet_Buffer);
+	AES_Encrypt_Data(AES_ADDR, AES_Crypto_Buffer, Radio_Data_Packet_Buffer);
 
 	for (i = 0; i < (sizeof(SPI_Buffer) - AES_SIZE); i++)
 	{
-		AES_Encrypt_Buffer[i] = SPI_Buffer[i];
+		AES_Crypto_Buffer[i] = SPI_Buffer[i];
 	}
 
 	for (i = (sizeof(SPI_Buffer) - AES_SIZE); i < AES_SIZE; i++)
 	{
-		AES_Encrypt_Buffer[i] = 0xAA;
+		AES_Crypto_Buffer[i] = 0xAA;
 	}
 
-	AES_Encrypt_Data(AES_ADDR, AES_Encrypt_Buffer, (tByte *) &(Radio_Data_Packet_Buffer[AES_SIZE]));
+	AES_Encrypt_Data(AES_ADDR, AES_Crypto_Buffer, (tByte *) &(Radio_Data_Packet_Buffer[AES_SIZE]));
 
 	RED_LED_OFF;
 }
@@ -276,14 +310,14 @@ void Poll_Transmit_Button_Task (void)
 		FLAG_PORT &= ~(RECORD_FLAG + PLAYBACK_FLAG);
 		Mode_Flag_G = RECEIVE;
 
-		hSCH_Add_Task(Receiving_Mode_Task, (RECEIVING_MODE_TASK_DELAY -1), 0, CO_OP);
-		hSCH_Add_Task(Check_RX_Data_Task, (CHECK_RX_DATA_TASK_DELAY -1), 0, CO_OP);
+		hSCH_Add_Task(Receiving_Mode_Task, (RECEIVING_MODE_TASK_DELAY - 1), 0, CO_OP);
+		hSCH_Add_Task(Check_RX_Data_Task, (CHECK_RX_DATA_TASK_DELAY - 1), 0, CO_OP);
 	}
 }
 
 void Transmit_Data_Task (void)
 {
-
+	Radio_Transmit (Radio_Data_Packet_Buffer, sizeof(Radio_Data_Packet_Buffer));
 }
 
 void Receiving_Mode_Task (void)
@@ -305,7 +339,30 @@ void Check_RX_Data_Task (void)
 
 void Decrypt_Data_Task (void)
 {
+	tByte i;
 
+	RED_LED_ON;
+
+	for (i = 0; i < AES_SIZE; i++)
+	{
+		AES_Crypto_Buffer[i] = Radio_Data_Packet_Buffer[i];
+	}
+
+	AES_decryptDataUsingEncryptionKey(AES_ADDR, AES_Crypto_Buffer, SPI_Buffer);
+
+	for (i = 0; i < (sizeof(Radio_Data_Packet_Buffer) - AES_SIZE); i++)
+	{
+		AES_Crypto_Buffer[i] = Radio_Data_Packet_Buffer[i];
+	}
+
+	for (i = (sizeof(Radio_Data_Packet_Buffer) - AES_SIZE); i < AES_SIZE; i++)
+	{
+		AES_Crypto_Buffer[i] = 0xAA;
+	}
+
+	AES_decryptDataUsingEncryptionKey(AES_ADDR, AES_Crypto_Buffer, (tByte *) &(SPI_Buffer[AES_SIZE]));
+
+	RED_LED_OFF;
 }
 
 

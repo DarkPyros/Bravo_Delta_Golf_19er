@@ -10,7 +10,7 @@
 
 #include "rng.h"
 
-static tNONCE Nonce;
+tNONCE Nonce;
 
 static tByte Random_Numbers[AES_SIZE] = { 0x00, 0x00, 0x00, 0x00,
 										  0x00, 0x00, 0x00, 0x00,

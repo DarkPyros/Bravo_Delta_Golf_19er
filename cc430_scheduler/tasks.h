@@ -12,6 +12,7 @@
 #include "main.h"
 
 #define RADIO_CHANGE_CHANNEL_DELAY	(0)
+#define TASK_ZERO_DELAY				(0)
 #define RNG_GET_RAND_TASK_DELAY		(1)
 #define DECRYPT_DATA_TASK_DELAY		(1)
 #define START_SYNC_TASK_DELAY		(2)
@@ -19,7 +20,9 @@
 #define UART_SEND_DATA_TASK_DELAY	(6)
 #define RECEIVING_MODE_TASK_DELAY	(8)
 #define POLL_TRANSMIT_TASK_DELAY	(20)
+#define SLAVE_SYNC_TASK_DELAY		(26)
 #define CHECK_RX_DATA_TASK_DELAY	(46)
+#define RAISE_START_FLAG_TASK_DELAY (51)
 #define TASK_MANAGER_DELAY			(79)
 #define SPI_RECEIVE_TASK_DELAY		(210)
 #define	ENCRYPT_DATA_TASK_DELAY		(246)
@@ -46,5 +49,6 @@ void Transmit_Data_Task (void);
 void Receiving_Mode_Task (void);
 void Check_RX_Data_Task (void);
 void Decrypt_Data_Task (void);
+void Raise_Start_Flag_Task (void);
 
 #endif /* TASKS_H_ */

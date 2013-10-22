@@ -50,6 +50,9 @@
 // Transmit button switch debounce threshold
 #define SW_THRES	(3)
 
+// Threshold for sync loss
+#define SYNC_LOST_THRESHOLD	(5)
+
 // UART debugging defines
 //#define TEXT_BINARY
 #define TEXT_HEX
