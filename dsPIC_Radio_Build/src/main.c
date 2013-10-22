@@ -240,7 +240,11 @@ int main(void) {
 	#if defined STANDALONE_TEST
 		while( CheckSwitchS1()==0 && CheckSwitchS2()==0 );
 	#else
-		while( START_FLAG_PIN == 0 );
+unsigned char portValue;
+portValue = START_FLAG_PIN;
+while( START_FLAG_PIN == 0 && CheckSwitchS1()==0 && CheckSwitchS2()==0 );
+		//while( START_FLAG_PIN == 0 );
+portValue = START_FLAG_PIN;
 	#endif
 
 	/* Once the CC430 signals it is ready, start the scheduler

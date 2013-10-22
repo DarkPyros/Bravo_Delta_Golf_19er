@@ -27,9 +27,10 @@ void SCH_UPDATE() _DCIInterrupt() {
 	/* Start sending synchronization clock pulse to other micro-controller
 	 * and updating tasks once the ready signal has been received*/
 	if(transceiverReady == TRUE) {
+
 #ifndef USE_SFM_CHIP
 		SYNC_CLK_PULSE_PIN ^= 1;
-#endif		
+#endif
 
 #ifndef	STANDALONE_TEST
 		SCH_checkRadioSyncingFlag();
@@ -92,12 +93,14 @@ void SCH_UPDATE() _DCIInterrupt() {
 			}
 	*/		#endif
 		}
+		/* If radioSyncingFlaf is true, do nothing*/
 		else {
 		}
 	}
+	/* If transceiver is not ready, do nothing */
 	else {
 	}
-} /* SCH_update() */
+} /* End of SCH_update() */
 
 void SCH_dispatchTasks() {
 	int i = 0;

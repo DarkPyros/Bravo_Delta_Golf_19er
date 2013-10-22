@@ -5,11 +5,11 @@
 #define PLAYBACK_TRIS	_TRISB6
 #define RECORD_TRIS		_TRISB7
 
-#define PLAYBACK_FLAG	_LATB6
-#define RECORD_FLAG		_LATB7
+#define PLAYBACK_FLAG	_RB6
+#define RECORD_FLAG		_RB7
 
 #define START_FLAG_TRIS	_TRISB2
-#define	START_FLAG_PIN	_LATB2
+#define	START_FLAG_PIN	_RB2
 
 /* Active mode for mode signal pins is LOW logic*/
 #define ACTIVE_MODE		1
