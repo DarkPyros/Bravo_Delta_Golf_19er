@@ -64,6 +64,43 @@ void WM8510Stop(WM8510Handle * pHandle)
 	_DCIIE = 0;				/* Stop Interrupts		*/
 }
 
+void __attribute__((__interrupt__,no_auto_psv)) _DCIInterrupt(void)
+{
+	_DCIIF = 0;;
+	
+	/* Send and Recieve Samples */
+	
+	thisWM8510Codec->activeInputBuffer[thisWM8510Codec->currentSampleIndex] = RXBUF0;
+	TXBUF0 = thisWM8510Codec->activeOutputBuffer[thisWM8510Codec->currentSampleIndex];
+	thisWM8510Codec->currentSampleIndex++;
+	
+	if(thisWM8510Codec->currentSampleIndex == thisWM8510Codec->currentFrameSize)
+	{
+		/* Transmitted one frame of data.
+		 * Recieved one frame of data.
+		 * Toggle the buffer indicator bit */
+	
+		thisWM8510Codec->statusFlag ^= WM8510DRV_TGL_BUFFER_IND;
+		if((thisWM8510Codec->statusFlag &	WM8510DRV_GET_BUFFER_IND) != 0)
+		{
+			/* Buffer indicator is 1 means use buffer2	*/
+			thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer2;
+			thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer2;
+		}
+		else
+		{
+			/* Buffer indicator is 0 means use buffer1	*/
+			thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer1;
+			thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer1;
+		}
+		/* Reset the sample index and update the sample count	*/
+		thisWM8510Codec->currentSampleIndex = 0;		
+		thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
+		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
+		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_WRITE_BUSY;
+	}
+}
+
 void WM8510Read(WM8510Handle * pHandle, int * data, int size)
 {
 	/* The buffer indicator bit in the status register determines which	
@@ -208,70 +245,42 @@ int WM8510IOCtl(WM8510Handle * pHandle,int command, void * value)
 	return(1);
 }
 
-void __attribute__((__interrupt__,no_auto_psv)) _DCIInterrupt(void)
-{
-	_DCIIF = 0;;
-	
-	/* Send and Recieve Samples */
-	
-	thisWM8510Codec->activeInputBuffer[thisWM8510Codec->currentSampleIndex] = RXBUF0;
-	TXBUF0 = thisWM8510Codec->activeOutputBuffer[thisWM8510Codec->currentSampleIndex];
-	thisWM8510Codec->currentSampleIndex++;
-	
-	if(thisWM8510Codec->currentSampleIndex == thisWM8510Codec->currentFrameSize)
-	{
-		/* Transmitted one frame of data.
-		 * Recieved one frame of data.
-		 * Toggle the buffer indicator bit */
-	
-		thisWM8510Codec->statusFlag ^= WM8510DRV_TGL_BUFFER_IND;
-		if((thisWM8510Codec->statusFlag &	WM8510DRV_GET_BUFFER_IND) != 0)
-		{
-			/* Buffer indicator is 1 means use buffer2	*/
-			thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer2;
-			thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer2;
-		}
-		else
-		{
-			/* Buffer indicator is 0 means use buffer1	*/
-			thisWM8510Codec->activeInputBuffer = thisWM8510Codec->inputBuffer1;
-			thisWM8510Codec->activeOutputBuffer = thisWM8510Codec->outputBuffer1;
-		}
-		/* Reset the sample index and update the sample count	*/
-		thisWM8510Codec->currentSampleIndex = 0;		
-		thisWM8510Codec->currentFrameSize = thisWM8510Codec->newFrameSize ;
-		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_READ_BUSY;
-		thisWM8510Codec->statusFlag &= WM8510DRV_CLR_WRITE_BUSY;
-	}
-}
-
 void WM8510SampleRate8KConfig(WM8510Handle *codecHandle)
 {
 	int commandValue,result;
+	
 	commandValue = 1;		/* Any value can be written to reset the codec	*/
 	result = WM8510IOCtl(codecHandle,WM8510_SOFTWARE_RESET, 	(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b001101111;		
 	WM8510IOCtl(codecHandle,WM8510_POWER_MGMT1, 		(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b000010101;
 	WM8510IOCtl(codecHandle,WM8510_POWER_MGMT2, 		(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b010001001;
 	WM8510IOCtl(codecHandle,WM8510_POWER_MGMT3, 		(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b000011000;
 	WM8510IOCtl(codecHandle,WM8510_AUDIO_INTERFACE, 	(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b110101001;
 	WM8510IOCtl(codecHandle,WM8510_CLOCKGEN_CTRL, 		(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b000001010;
 	WM8510IOCtl(codecHandle,WM8510_ADDITIONAL_CTRL, 	(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b000000100;
 	WM8510IOCtl(codecHandle,WM8510_GPIO_STUFF, 			(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b100001000;
 	WM8510IOCtl(codecHandle,WM8510_ADC_CONTROL	, 		(void *) &commandValue);
 	if (result == -1) while(1);
@@ -299,23 +308,29 @@ void WM8510SampleRate8KConfig(WM8510Handle *codecHandle)
 	commandValue = 0b000011000;
 	WM8510IOCtl(codecHandle,WM8510_PLL_N, 				(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b000001100;
 	WM8510IOCtl(codecHandle,WM8510_PLL_K1, 				(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b010010011;
 	WM8510IOCtl(codecHandle,WM8510_PLL_K2, 				(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b011101001;
 	WM8510IOCtl(codecHandle,WM8510_PLL_K3, 				(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b000000100;
 	WM8510IOCtl(codecHandle,WM8510_INPUT_CTRL, 			(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b000000000;
-	WM8510IOCtl(codecHandle,WM8510_ADC_BOOST_CTRL, 	(void *) &commandValue);
+	WM8510IOCtl(codecHandle,WM8510_ADC_BOOST_CTRL,	 	(void *) &commandValue);
 	if (result == -1) while(1);
+	
 	commandValue = 0b000000001;
-	WM8510IOCtl(codecHandle,WM8510_MONO_MIXER_CTRL,	 (void *) &commandValue);
+	WM8510IOCtl(codecHandle,WM8510_MONO_MIXER_CTRL,		(void *) &commandValue);
 	if (result == -1) while(1);
 
 }
